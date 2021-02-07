@@ -5,7 +5,8 @@
 namespace hdi_plan {
 class Edge{
 public:
-    Edge();
+    Edge() = default;
+    Edge(const RRTNode& start_node, const RRTNode& end_node);
     ~Edge();
     float calculate_dist();
 

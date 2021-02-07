@@ -1,11 +1,12 @@
 #pragma once
 
 #include <Eigen/Dense>
-
+#include <memory>
 namespace hdi_plan {
 
 class RRTNode {
 public:
+    RRTNode() = default;
     RRTNode(Eigen::Vector3d position);
     ~RRTNode();
 

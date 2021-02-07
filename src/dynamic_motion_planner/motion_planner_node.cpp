@@ -11,6 +11,8 @@ int main(int argc, char** argv) {
     //ompl::base::RealVectorBounds bounds = motion_planner.get_space_info();
     int dim = motion_planner.get_dim();
     std::cout << "#########################" << dim << std::endl;
+    double size = motion_planner.get_nn_size();
+    std::cout << "The size of nn is " << size;
     ros::spin();
     return 0;
 }

@@ -3,6 +3,8 @@
 #include <stack>
 #include <vector>
 #include <Eigen/Dense>
+#include <memory>
+#include <math.h>
 
 //ompl
 #include "ompl/datastructures/NearestNeighbors.h"
@@ -14,6 +16,7 @@
 
 //ros
 #include <ros/ros.h>
+#include <nav_msgs/Odometry.h>
 
 #include "dynamic_motion_planner/node_list.hpp"
 #include "dynamic_motion_planner/edge.hpp"
@@ -31,8 +34,16 @@ public:
     // debug
     ompl::base::RealVectorBounds get_space_info();
     int get_dim();
+    int get_debug();
+    double get_nn_size();
+    //publisher to debug
+    ros::Publisher pub_quadrotor_state_;
+
 
 private:
+    // debug
+    int debug = 0;
+
     // ros nodes
     ros::NodeHandle nh_;
     ros::NodeHandle pnh_;
@@ -41,8 +52,8 @@ private:
     std::stack<std::vector<Eigen::Vector3d>> sample_stack;
 
     // useful rrt nodes
-    std::shared_ptr<RRTNode> root;
-    std::shared_ptr<RRTNode> goal;
+    std::shared_ptr<RRTNode> root_;
+    std::shared_ptr<RRTNode> goal_;
 
     // space configuration
     ompl::base::SpaceInformationPtr si_;
@@ -50,15 +61,31 @@ private:
     void setup_space();
 
     // geometric Near-neighbor Access Tree
-    std::shared_ptr<ompl::NearestNeighborsGNAT<std::shared_ptr<RRTNode>>> nearest_neighbors_tree;
+    std::shared_ptr<ompl::NearestNeighborsGNAT<std::shared_ptr<RRTNode>>> nearest_neighbors_tree_;
 
     // setup
     void setup();
-    static float distance_function(const std::shared_ptr<RRTNode>& a, const std::shared_ptr<RRTNode>& b) ;
+    static double distance_function(const std::shared_ptr<RRTNode>& a, const std::shared_ptr<RRTNode>& b) ;
 
     //
     std::shared_ptr<RRTNode> generate_random_node();
 
+    // quadrotor related
+    Eigen::Vector3d quadrotor_state_;
+
+    // subscriber
+    void setup_sub();
+    ros::Subscriber sub_quadrotor_state_;
+    void quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg);
+
+    // publisher
+
+    // main loop
+    void solve();
+
+    // unitilites
+    double get_distance_between_states(Eigen::Vector3d state1, Eigen::Vector3d state2);
+    void calculateRRG();
 };
 
 
