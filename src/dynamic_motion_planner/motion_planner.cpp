@@ -27,9 +27,9 @@ double MotionPlanner::distance_function(const std::shared_ptr<RRTNode>& a, const
 }
 
 void MotionPlanner::setup() {
-    Eigen::Vector3d root_position{0,0,0};
+    Eigen::Vector3d root_position(0,0,0);
     root_ = std::make_shared<RRTNode>(root_position);
-    Eigen::Vector3d goal_position{1,1,1};
+    Eigen::Vector3d goal_position(1,1,1);
     goal_ = std::make_shared<RRTNode>(goal_position);
 
     nearest_neighbors_tree_ = std::make_shared<ompl::NearestNeighborsGNAT<std::shared_ptr<RRTNode>>>();
@@ -63,7 +63,7 @@ double MotionPlanner::get_nn_size() {
 
 // not the static function, need to use the space config
 std::shared_ptr<RRTNode> MotionPlanner::generate_random_node() {
-    Eigen::Vector3d random_position{0.5,0.5,0.5};
+    Eigen::Vector3d random_position(0.5,0.5,0.5);
     auto random_node = std::make_shared<RRTNode>(random_position);
     return random_node;
 }
@@ -74,14 +74,14 @@ void MotionPlanner::setup_sub() {
 }
 
 void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg) {
-    Eigen::Vector3d quadrotor_state{msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z};
+    Eigen::Vector3d quadrotor_state(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
     this->quadrotor_state_ = quadrotor_state;
     this->debug += 1;
     ROS_INFO("Check if reach the goal region: ");
 
     ROS_INFO("Now trigger the main loop of dynamic planner");
     //this->pub_quadrotor_state_.publish(msg);
-    if (this->get_distance_between_states(quadrotor_state, this->goal_->get_position()) > 3.0) {
+    if (this->get_distance_between_states(quadrotor_state, this->goal_->get_position()) > 0.1) {
         this->solve();
     } else {
         ROS_INFO("Already reach the goal. Will exit.");
@@ -95,14 +95,24 @@ double MotionPlanner::get_distance_between_states(Eigen::Vector3d state1, Eigen:
 }
 
 void MotionPlanner::solve() {
-    // sample a node
-    //std::shared_ptr<RRTNode> new_node = generate_random_node();
-    //nearest_neighbors_tree_->add(new_node);
     this->calculateRRG();
+
+    // sample random state
+    // need to implement how to generate random state here, by adding the info of updating obstacles
+    std::shared_ptr<RRTNode> new_node = generate_random_node();
+
+    // find the closest node in the tree
+    std::shared_ptr<RRTNode> nearest_node = this->nearest_neighbors_tree_->nearest(new_node);
+    
+    
+    //nearest_neighbors_tree_->add(new_node);
+
+
 }
 
 void MotionPlanner::calculateRRG() {
-
+    double num_of_nodes_in_tree = static_cast<double>(this->nearest_neighbors_tree_->size());
+    this->rrg_r_ = std::min(this->max_distance_, this->r_rrt_ * std::pow(log(num_of_nodes_in_tree)/num_of_nodes_in_tree, 1/static_cast<double>(this->dimension_)));
+}
 }
 
-}

@@ -42,7 +42,7 @@ public:
 
 private:
     // debug
-    int debug = 0;
+    int debug{0};
 
     // ros nodes
     ros::NodeHandle nh_;
@@ -59,6 +59,7 @@ private:
     ompl::base::SpaceInformationPtr si_;
     std::shared_ptr<ompl::base::SE3StateSpace> space_;
     void setup_space();
+    int dimension_{3};
 
     // geometric Near-neighbor Access Tree
     std::shared_ptr<ompl::NearestNeighborsGNAT<std::shared_ptr<RRTNode>>> nearest_neighbors_tree_;
@@ -85,7 +86,14 @@ private:
 
     // unitilites
     double get_distance_between_states(Eigen::Vector3d state1, Eigen::Vector3d state2);
+
+    // for calculate the shrinking ball radius
     void calculateRRG();
+    double max_distance_{0.}; // the maximum length of a motion to be added to a tree
+    double r_rrt_{0.}; // a constant for r-disc rewiring calculations
+    double rrg_r_; // current value of the radius used for the neighbors
+
+
 };
 
 
