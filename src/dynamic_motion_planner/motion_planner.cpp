@@ -98,6 +98,7 @@ void MotionPlanner::solve() {
     this->calculateRRG();
 
     // sample random state
+    
     // need to implement how to generate random state here, by adding the info of updating obstacles
     std::shared_ptr<RRTNode> new_node = generate_random_node();
 
