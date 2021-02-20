@@ -93,6 +93,9 @@ private:
     double r_rrt_{0.}; // a constant for r-disc rewiring calculations
     double rrg_r_; // current value of the radius used for the neighbors
 
+    // functions in the main loop
+    void saturate(std::shared_ptr<RRTNode> new_node, std::shared_ptr<RRTNode> nearest_node);
+
 
 };
 

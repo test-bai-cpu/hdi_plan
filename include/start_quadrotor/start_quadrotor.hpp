@@ -32,8 +32,7 @@ public:
     ~StartQuadrotor();
 
     //debug functions
-    void get_unity_connect_info();
-    void render_new_frame();
+
 
     void set_unity();
     void connect_unity();
@@ -45,7 +44,7 @@ private:
 
     // subscriber
     ros::Subscriber state_estimate_sub_;
-    ros::Subscriber test_sub_;
+    ros::Subscriber obstacle_info_sub_;
 
     // main loop timer
     ros::Timer main_loop_timer_;
@@ -75,6 +74,7 @@ private:
     // callbacks
     void main_loop_callback(const ros::TimerEvent& event);
     void pose_callback(const nav_msgs::Odometry::ConstPtr& msg);
+    void obstacle_callback(const nav_msgs::Odometry::ConstPtr& msg);
     void obstacle_update_callback();
     void test1_callback(const std_msgs::String& msg);
 };

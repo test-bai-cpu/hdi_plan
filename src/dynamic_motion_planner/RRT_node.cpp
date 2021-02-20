@@ -4,8 +4,8 @@
 
 namespace hdi_plan {
 
-RRTNode::RRTNode(Eigen::Vector3d position) {
-    this->position = position;
+RRTNode::RRTNode(Eigen::Vector3d state) {
+    this->state= state;
 }
 
 RRTNode::~RRTNode() {

@@ -7,11 +7,11 @@ namespace hdi_plan {
 class RRTNode {
 public:
     RRTNode() = default;
-    RRTNode(Eigen::Vector3d position);
+    RRTNode(Eigen::Vector3d state);
     ~RRTNode();
 
-    Eigen::Vector3d get_position() const {
-        return this->position;
+    Eigen::Vector3d get_state() const {
+        return this->state;
     };
 private:
     // data used for KD Tree
@@ -28,8 +28,8 @@ private:
     int heap_index = -1;
     bool in_heap = false;
 
-    //position
-    Eigen::Vector3d position;
+    //position, the state
+    Eigen::Vector3d state;
 
     // data used for RRTx
     bool in_os_queue = false;

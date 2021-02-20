@@ -81,7 +81,7 @@ void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr 
 
     ROS_INFO("Now trigger the main loop of dynamic planner");
     //this->pub_quadrotor_state_.publish(msg);
-    if (this->get_distance_between_states(quadrotor_state, this->goal_->get_position()) > 0.1) {
+    if (this->get_distance_between_states(quadrotor_state, this->goal_->get_state()) > 0.1) {
         this->solve();
     } else {
         ROS_INFO("Already reach the goal. Will exit.");
@@ -104,8 +104,13 @@ void MotionPlanner::solve() {
 
     // find the closest node in the tree
     std::shared_ptr<RRTNode> nearest_node = this->nearest_neighbors_tree_->nearest(new_node);
-    
-    
+    double distance = this->get_distance_between_states(new_node->get_state(), nearest_node->get_state());
+    if (distance > this->max_distance_) {
+        this->saturate(new_node, nearest_node);
+    }
+
+    //this->extend();
+
     //nearest_neighbors_tree_->add(new_node);
 
 
@@ -114,6 +119,10 @@ void MotionPlanner::solve() {
 void MotionPlanner::calculateRRG() {
     double num_of_nodes_in_tree = static_cast<double>(this->nearest_neighbors_tree_->size());
     this->rrg_r_ = std::min(this->max_distance_, this->r_rrt_ * std::pow(log(num_of_nodes_in_tree)/num_of_nodes_in_tree, 1/static_cast<double>(this->dimension_)));
+}
+
+void MotionPlanner::saturate(std::shared_ptr<RRTNode> new_node, std::shared_ptr<RRTNode> nearest_node) {
+    // move the newnode to distance = sigma to nearest node here
 }
 }
 
