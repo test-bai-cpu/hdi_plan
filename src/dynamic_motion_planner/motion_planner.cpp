@@ -29,7 +29,7 @@ double MotionPlanner::distance_function(const std::shared_ptr<RRTNode>& a, const
 void MotionPlanner::setup() {
     Eigen::Vector3d root_position(0,0,0);
     root_ = std::make_shared<RRTNode>(root_position);
-    Eigen::Vector3d goal_position(1,1,1);
+    Eigen::Vector3d goal_position(10,10,10);
     goal_ = std::make_shared<RRTNode>(goal_position);
 
     nearest_neighbors_tree_ = std::make_shared<ompl::NearestNeighborsGNAT<std::shared_ptr<RRTNode>>>();
@@ -39,17 +39,18 @@ void MotionPlanner::setup() {
 void MotionPlanner::setup_space() {
     this->space_ = std::make_shared<ompl::base::SE3StateSpace>();
     ompl::base::RealVectorBounds bounds(3);
-    bounds.setLow(-1);
-    bounds.setHigh(1);
+    bounds.setLow(-10);
+    bounds.setHigh(10);
     this->space_->setBounds(bounds);
     this->si_ = std::make_shared<ompl::base::SpaceInformation>(this->space_);
+    //this->space_->interpolate()
 }
 
 ompl::base::RealVectorBounds MotionPlanner::get_space_info() {
     return this->space_->getBounds();
 }
 
-int MotionPlanner::get_dim() {
+unsigned int MotionPlanner::get_dim() {
     return this->space_->getDimension();
 }
 
@@ -77,9 +78,9 @@ void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr 
     Eigen::Vector3d quadrotor_state(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
     this->quadrotor_state_ = quadrotor_state;
     this->debug += 1;
-    ROS_INFO("Check if reach the goal region: ");
+    //ROS_INFO("Check if reach the goal region: ");
 
-    ROS_INFO("Now trigger the main loop of dynamic planner");
+    //ROS_INFO("Now trigger the main loop of dynamic planner");
     //this->pub_quadrotor_state_.publish(msg);
     if (this->get_distance_between_states(quadrotor_state, this->goal_->get_state()) > 0.1) {
         this->solve();
@@ -90,39 +91,96 @@ void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr 
 }
 
 double MotionPlanner::get_distance_between_states(Eigen::Vector3d state1, Eigen::Vector3d state2) {
-    double distance = std::sqrt((state1 - state2).squaredNorm());
-    return distance;
+    return static_cast<double>(std::sqrt((state1 - state2).squaredNorm()));
 }
 
-void MotionPlanner::solve() {
+bool MotionPlanner::solve() {
     this->calculateRRG();
 
     // sample random state
     
     // need to implement how to generate random state here, by adding the info of updating obstacles
-    std::shared_ptr<RRTNode> new_node = generate_random_node();
+    std::shared_ptr<RRTNode> random_node = generate_random_node();
 
     // find the closest node in the tree
-    std::shared_ptr<RRTNode> nearest_node = this->nearest_neighbors_tree_->nearest(new_node);
-    double distance = this->get_distance_between_states(new_node->get_state(), nearest_node->get_state());
+    std::shared_ptr<RRTNode> nearest_node = this->nearest_neighbors_tree_->nearest(random_node);
+    double distance = this->get_distance_between_states(random_node->get_state(), nearest_node->get_state());
     if (distance > this->max_distance_) {
-        this->saturate(new_node, nearest_node);
+        this->saturate(random_node, nearest_node, distance);
     }
 
-    //this->extend();
+    if (!this->node_in_free_space_check(random_node)) {
+        return false;
+    }
+    this->extend(random_node);
 
     //nearest_neighbors_tree_->add(new_node);
 
 
 }
 
+bool MotionPlanner::node_in_free_space_check(const std::shared_ptr<RRTNode>& random_node) {
+    return true;
+}
+
 void MotionPlanner::calculateRRG() {
-    double num_of_nodes_in_tree = static_cast<double>(this->nearest_neighbors_tree_->size());
+    auto num_of_nodes_in_tree = static_cast<double>(this->nearest_neighbors_tree_->size());
     this->rrg_r_ = std::min(this->max_distance_, this->r_rrt_ * std::pow(log(num_of_nodes_in_tree)/num_of_nodes_in_tree, 1/static_cast<double>(this->dimension_)));
 }
 
-void MotionPlanner::saturate(std::shared_ptr<RRTNode> new_node, std::shared_ptr<RRTNode> nearest_node) {
-    // move the newnode to distance = sigma to nearest node here
+void MotionPlanner::saturate(std::shared_ptr<RRTNode> random_node, const std::shared_ptr<RRTNode>& nearest_node, double distance) const {
+    // move the random node to distance = sigma to nearest node here, using interpolate
+    Eigen::Vector3d random_node_state = random_node->get_state();
+    Eigen::Vector3d nearest_node_state = nearest_node->get_state();
+    double x = (random_node_state(0) - nearest_node_state(0)) * this->max_distance_ / distance + nearest_node_state(0);
+    double y = (random_node_state(1) - nearest_node_state(1)) * this->max_distance_ / distance + nearest_node_state(1);
+    double z = (random_node_state(2) - nearest_node_state(2)) * this->max_distance_ / distance + nearest_node_state(2);
+    ROS_INFO("Change the position of random node to be closer to nearest node");
+    random_node->set_state_by_value(x,y,z);
 }
+
+// inserting a new node
+void MotionPlanner::extend(std::shared_ptr<RRTNode> random_node) {
+    // 1. find all nodes within shrinking hyperball in the nearest tree, and their distance
+    this->update_neighbors_list(random_node);
+
+    // find parent
+    for (auto it = random_node->nbh.begin(); it != random_node->nbh.end();) {
+        std::shared_ptr<RRTNode> neighbor = it->first;
+        bool feasibility = it->second;
+
+        // compute cost using this neighbor as a parent
+        double inc_cost = this->compute_cost(neighbor->get_state(), random_node->get_state());
+        double cost = this->combine_cost(neighbor->get_cost(), inc_cost);
+        if (this->is_cost_better_than(cost, random_node->get_cost())) {
+            // check range and feasibility
+
+        }
+
+    }
+}
+
+void MotionPlanner::update_neighbors_list(std::shared_ptr<RRTNode> random_node) {
+    std::vector<std::shared_ptr<RRTNode>> nbh;
+    this->nearest_neighbors_tree_->nearestR(random_node, this->rrg_r_, nbh);
+
+    random_node->nbh.resize(nbh.size());
+    // the default bool value of all added nodes are false, the bool value is the feasibility of edge as been tested
+    std::transform(nbh.begin(), nbh.end(), random_node->nbh.begin(), [](std::shared_ptr<RRTNode> node) { return std::pair<std::shared_ptr<RRTNode>, bool>(node, false);});
+}
+
+double MotionPlanner::compute_cost(Eigen::Vector3d state1, Eigen::Vector3d state2) {
+    //Todo: implement how to compute cost by the map here, need more discussion
+    return static_cast<double>(std::sqrt((state1 - state2).squaredNorm()));
+}
+
+double MotionPlanner::combine_cost(double cost1, double cost2) {
+    return cost1 + cost2;
+}
+
+bool MotionPlanner::is_cost_better_than(double cost1, double cost2) {
+    return cost1 < cost2;
+}
+
 }
 

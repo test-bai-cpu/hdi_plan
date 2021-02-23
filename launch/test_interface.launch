@@ -4,6 +4,8 @@
   <arg name="enable_ground_truth" default="true"/>
   <arg name="paused" value="false"/>
   <arg name="use_unity_editor" default="false" />
+  <arg name="x_init" default="0"/>
+  <arg name="y_init" default="0"/>
   <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find rotors_gazebo)/models"/>
   <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models"/>
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -36,14 +38,16 @@
     <node name="waypoint_publisher" pkg="rotors_gazebo" type="waypoint_publisher" output="screen" args="0 0 1 0 5"/>
 
     <!-- RPG Flightmare Unity Render. -->
-    <node pkg="flightrender" type="RPG_Flightmare.x86_64" name="rpg_flightmare_render" unless="$(arg use_unity_editor)">
+    <node name="rpg_flightmare_render" pkg="flightrender" type="RPG_Flightmare.x86_64" unless="$(arg use_unity_editor)">
     </node>
 
-    <node pkg="hdi_plan" type="start_quadrotor_node" name="start_quadrotor_node" output="screen">
-      <remap from="hdi_plan/state_estimate" to="ground_truth/odometry" />
+    <node name="start_quadrotor_node" pkg="hdi_plan" type="start_quadrotor_node" output="screen">
+      <rosparam file="$(find hdi_plan)/params/start_quadrotor.yaml" />
+      <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
     </node>
 
     <node name="dynamic_motion_planner" pkg="hdi_plan" type="dynamic_motion_planner" output="screen" >
+      <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
     </node>
 
   </group>

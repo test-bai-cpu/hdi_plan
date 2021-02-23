@@ -5,7 +5,7 @@
 namespace hdi_plan {
 
 RRTNode::RRTNode(Eigen::Vector3d state) {
-    this->state= state;
+    this->state_= state;
 }
 
 RRTNode::~RRTNode() {

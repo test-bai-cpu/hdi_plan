@@ -33,7 +33,7 @@ public:
 
     // debug
     ompl::base::RealVectorBounds get_space_info();
-    int get_dim();
+    unsigned int get_dim();
     int get_debug();
     double get_nn_size();
     //publisher to debug
@@ -66,7 +66,7 @@ private:
 
     // setup
     void setup();
-    static double distance_function(const std::shared_ptr<RRTNode>& a, const std::shared_ptr<RRTNode>& b) ;
+    double distance_function(const std::shared_ptr<RRTNode>& a, const std::shared_ptr<RRTNode>& b) ;
 
     //
     std::shared_ptr<RRTNode> generate_random_node();
@@ -82,7 +82,7 @@ private:
     // publisher
 
     // main loop
-    void solve();
+    bool solve();
 
     // unitilites
     double get_distance_between_states(Eigen::Vector3d state1, Eigen::Vector3d state2);
@@ -94,9 +94,17 @@ private:
     double rrg_r_; // current value of the radius used for the neighbors
 
     // functions in the main loop
-    void saturate(std::shared_ptr<RRTNode> new_node, std::shared_ptr<RRTNode> nearest_node);
+    void saturate(std::shared_ptr<RRTNode> random_node, const std::shared_ptr<RRTNode>& nearest_node, double distance) const;
+    bool node_in_free_space_check(const std::shared_ptr<RRTNode>& random_node);
+    void extend(std::shared_ptr<RRTNode> random_node);
 
+    // extend related
+    void update_neighbors_list(std::shared_ptr<RRTNode> random_node);
 
+    // cost related members
+    double compute_cost(Eigen::Vector3d state1, Eigen::Vector3d state2);
+    double combine_cost(double cost1, double cost2);
+    bool is_cost_better_than(double cost1, double cost2);
 };
 
 

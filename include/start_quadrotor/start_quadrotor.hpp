@@ -31,37 +31,26 @@ public:
     StartQuadrotor(const ros::NodeHandle& nh, const ros::NodeHandle& pnh);
     ~StartQuadrotor();
 
-    //debug functions
-
-
-    void set_unity();
-    void connect_unity();
-
 private:
     // ros nodes
     ros::NodeHandle nh_;
     ros::NodeHandle pnh_;
 
     // subscriber
-    ros::Subscriber state_estimate_sub_;
+    ros::Subscriber quadrotor_state_sub_;
     ros::Subscriber obstacle_info_sub_;
 
     // main loop timer
     ros::Timer main_loop_timer_;
 
-    // unity quadrotor
+    // connection in unity
     std::shared_ptr<Quadrotor> quad_ptr_;
-    std::shared_ptr<RGBCamera> rgb_camera_;
     QuadState quad_state_;
 
-    // Flightmare(Unity3D)
     SceneID scene_id_;
     bool unity_ready_;
     bool unity_render_;
-    uint16_t receive_id_;
     std::shared_ptr<UnityBridge> unity_bridge_ptr_;
-    RenderMessage_t unity_output_;
-    
 
     // auxiliary variables
     Scalar main_loop_freq_;
@@ -69,14 +58,14 @@ private:
     bool load_params();
 
     void spawn_quadrotor();
-    void keep_rendering();
 
     // callbacks
     void main_loop_callback(const ros::TimerEvent& event);
     void pose_callback(const nav_msgs::Odometry::ConstPtr& msg);
     void obstacle_callback(const nav_msgs::Odometry::ConstPtr& msg);
-    void obstacle_update_callback();
-    void test1_callback(const std_msgs::String& msg);
+
+    void set_unity();
+    void connect_unity();
 };
 
 }  // namespace flightros

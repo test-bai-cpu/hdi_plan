@@ -8,13 +8,20 @@ StartQuadrotor::StartQuadrotor(const ros::NodeHandle &nh, const ros::NodeHandle 
     scene_id_(UnityScene::WAREHOUSE),
     unity_ready_(false),
     unity_render_(false),
-    receive_id_(0),
     main_loop_freq_(50.0) {
 
-    state_estimate_sub_ = nh_.subscribe("hdi_plan/state_estimate", 1,
+    // load parameters
+    if (!load_params()) {
+    ROS_WARN("[%s] Could not load all parameters.",
+             this->pnh_.getNamespace().c_str());
+    } else {
+    ROS_INFO("[%s] Loaded all parameters.", this->pnh_.getNamespace().c_str());
+    }
+
+    this->quadrotor_state_sub_ = this->nh_.subscribe("hdi_plan/quadrotor_state", 1,
                                  &StartQuadrotor::pose_callback, this);
-    obstacle_info_sub_ = nh_.subscribe("hdi_plan/test1", 1, &StartQuadrotor::obstacle_callback, this);
-    main_loop_timer_ = nh_.createTimer(ros::Rate(main_loop_freq_),
+    this->obstacle_info_sub_ = this->nh_.subscribe("hdi_plan/obstacle_state", 1, &StartQuadrotor::obstacle_callback, this);
+    this->main_loop_timer_ = this->nh_.createTimer(ros::Rate(this->main_loop_freq_),
                                       &StartQuadrotor::main_loop_callback, this);
 
     spawn_quadrotor();
@@ -29,78 +36,68 @@ StartQuadrotor::StartQuadrotor(const ros::NodeHandle &nh, const ros::NodeHandle 
 
 StartQuadrotor::~StartQuadrotor() {}
 
-void StartQuadrotor::obstacle_update_callback() {
-
-
-}
-
 void StartQuadrotor::spawn_quadrotor() {
-    // quad initialization
-    quad_ptr_ = std::make_shared<Quadrotor>();
-
-    Vector<3> B_r_BC(0.0, 0.0, 0.3);
-    Matrix<3, 3> R_BC = Quaternion(1.0, 0.0, 0.0, 0.0).toRotationMatrix();
-    std::cout << R_BC << std::endl;
-
-    // initialization
-    quad_state_.setZero();
-    quad_ptr_->reset(quad_state_);
+    this->quad_ptr_ = std::make_shared<Quadrotor>();
+    this->quad_state_.setZero();
+    this->quad_ptr_->reset(this->quad_state_);
 }
 
 void StartQuadrotor::obstacle_callback(const nav_msgs::Odometry::ConstPtr &msg) {
     std::string object_id = "obstacle";
     std::string prefab_id = "test_cube";
-    std::shared_ptr<StaticGate> obstalce = std::make_shared<StaticGate>(object_id, prefab_id);
-    obstalce->setPosition(Eigen::Vector3f((Scalar)msg->pose.pose.position.x, (Scalar)msg->pose.pose.position.y, (Scalar)msg->pose.pose.position.z));
-    obstalce->setRotation(
+    std::shared_ptr<StaticGate> obstacle = std::make_shared<StaticGate>(object_id, prefab_id);
+    obstacle->setPosition(Eigen::Vector3f((Scalar)msg->pose.pose.position.x, (Scalar)msg->pose.pose.position.y, (Scalar)msg->pose.pose.position.z));
+    obstacle->setRotation(
             Quaternion((Scalar)msg->pose.pose.orientation.w, (Scalar)msg->pose.pose.orientation.x, (Scalar)msg->pose.pose.orientation.y, (Scalar)msg->pose.pose.orientation.z));
-    unity_bridge_ptr_->addStaticObject(obstalce);
+    this->unity_bridge_ptr_->addStaticObject(obstacle);
 
-    if (unity_render_ && unity_ready_) {
-        unity_bridge_ptr_->getRender(0);
-        unity_bridge_ptr_->handleOutput();
+    if (this->unity_render_ && this->unity_ready_) {
+        this->unity_bridge_ptr_->getRender(0);
+        this->unity_bridge_ptr_->handleOutput();
     }
 }
 
 void StartQuadrotor::pose_callback(const nav_msgs::Odometry::ConstPtr &msg) {
-  quad_state_.x[QS::POSX] = (Scalar)msg->pose.pose.position.x;
-  quad_state_.x[QS::POSY] = (Scalar)msg->pose.pose.position.y;
-  quad_state_.x[QS::POSZ] = (Scalar)msg->pose.pose.position.z;
-  quad_state_.x[QS::ATTW] = (Scalar)msg->pose.pose.orientation.w;
-  quad_state_.x[QS::ATTX] = (Scalar)msg->pose.pose.orientation.x;
-  quad_state_.x[QS::ATTY] = (Scalar)msg->pose.pose.orientation.y;
-  quad_state_.x[QS::ATTZ] = (Scalar)msg->pose.pose.orientation.z;
-  
-  quad_ptr_->setState(quad_state_);
+    this->quad_state_.x[QS::POSX] = (Scalar)msg->pose.pose.position.x;
+    this->quad_state_.x[QS::POSY] = (Scalar)msg->pose.pose.position.y;
+    this->quad_state_.x[QS::POSZ] = (Scalar)msg->pose.pose.position.z;
+    this->quad_state_.x[QS::ATTW] = (Scalar)msg->pose.pose.orientation.w;
+    this->quad_state_.x[QS::ATTX] = (Scalar)msg->pose.pose.orientation.x;
+    this->quad_state_.x[QS::ATTY] = (Scalar)msg->pose.pose.orientation.y;
+    this->quad_state_.x[QS::ATTZ] = (Scalar)msg->pose.pose.orientation.z;
 
-  if (unity_render_ && unity_ready_) {
-    unity_bridge_ptr_->getRender(0);
-    unity_bridge_ptr_->handleOutput();
-  }
+    this->quad_ptr_->setState(this->quad_state_);
+
+    if (this->unity_render_ && this->unity_ready_) {
+      this->unity_bridge_ptr_->getRender(0);
+      this->unity_bridge_ptr_->handleOutput();
+    }
 }
 
 void StartQuadrotor::set_unity() {
-  if (!unity_render_ && unity_bridge_ptr_ == nullptr) {
-    // create unity bridge
-    unity_bridge_ptr_ = UnityBridge::getInstance();
-    unity_bridge_ptr_->addQuadrotor(quad_ptr_);
-    unity_render_ = true;
-    ROS_INFO("[%s] Unity Bridge is created.", pnh_.getNamespace().c_str());
-  }
+    if (!this->unity_render_ && this->unity_bridge_ptr_ == nullptr) {
+        this->unity_bridge_ptr_ = UnityBridge::getInstance();
+        this->unity_bridge_ptr_->addQuadrotor(this->quad_ptr_);
+        this->unity_render_ = true;
+    ROS_INFO("[%s] Unity Bridge is created.", this->pnh_.getNamespace().c_str());
+    }
 }
 
 void StartQuadrotor::connect_unity() {
-  if (unity_render_ && unity_bridge_ptr_) {
-      unity_ready_ = unity_bridge_ptr_->connectUnity(scene_id_);
-  }
+    if (this->unity_render_ && this->unity_bridge_ptr_) {
+        this->unity_ready_ = this->unity_bridge_ptr_->connectUnity(this->scene_id_);
+    }
+}
+
+void StartQuadrotor::main_loop_callback(const ros::TimerEvent &event) {
+  // empty
 }
 
 bool StartQuadrotor::load_params() {
-  // load parameters
-  quadrotor_common::getParam("main_loop_freq", main_loop_freq_, pnh_);
-  quadrotor_common::getParam("unity_render", unity_render_, pnh_);
-
-  return true;
+    // load parameters
+    quadrotor_common::getParam("main_loop_freq", this->main_loop_freq_, this->pnh_);
+    return true;
 }
+
 
 }  // namespace hdi_plan
