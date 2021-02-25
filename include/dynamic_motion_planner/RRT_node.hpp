@@ -14,8 +14,20 @@ public:
         return this->state_;
     };
 
-    double get_cost() const {
-        return this->cost_;
+    double get_lmc() const {
+        return this->lmc_;
+    };
+
+    double set_lmc(double lmc) {
+        this->lmc_ = lmc;
+    };
+
+    double get_g_cost() const {
+        return this->g_cost_;
+    };
+
+    double set_g_cost(double g_cost) {
+        this->g_cost_ = g_cost;
     };
 
     Eigen::Vector3d set_state_by_vector(Eigen::Vector3d new_state) {
@@ -32,6 +44,14 @@ public:
 
     // for extend part
     std::vector<std::pair<std::shared_ptr<RRTNode>, bool>> nbh;
+
+    // for neighbors, original in is N0-(v), out is N0+(v), running in is Nr-(v), out is Nr+(v)
+    std::vector<std::shared_ptr<RRTNode>> n0_in; // -
+    std::vector<std::shared_ptr<RRTNode>> n0_out; // +
+    std::vector<std::shared_ptr<RRTNode>> nr_in; // -
+    std::vector<std::shared_ptr<RRTNode>> nr_out; // +
+
+    std::vector<std::shared_ptr<RRTNode>> test;
 
 
 
@@ -53,11 +73,15 @@ private:
     Eigen::Vector3d state_;
 
     // data used for RRTx
-    bool in_os_queue = false;
-    bool is_move_goal = false;
+    bool in_os_queue_ = false;
+    bool is_move_goal_ = false;
 
     // cost related
-    double cost_;
+    double cost_ = 0;
+    double inc_cost_ = 0;
+    double lmc_ = 0;
+    double g_cost_ = 0;
+
 
 
 };

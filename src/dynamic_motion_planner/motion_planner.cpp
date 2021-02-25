@@ -112,14 +112,38 @@ bool MotionPlanner::solve() {
     if (!this->node_in_free_space_check(random_node)) {
         return false;
     }
-    this->extend(random_node);
 
-    //nearest_neighbors_tree_->add(new_node);
+    if (!this->extend(random_node)) {
+        return false;
+    }
 
+    this->rewire_neighbors(random_node);
+    this->reduce_inconsistency();
+
+}
+
+void MotionPlanner::rewire_neighbors(std::shared_ptr<RRTNode> random_node) {
+    this->cull_neighbors(random_node);
+}
+
+void MotionPlanner::cull_neighbors(std::shared_ptr<RRTNode> random_node) {
+    for (auto it = random_node->nr_out.begin(); it != random_node->test.end(); ++it) {
+        std::shared_ptr<RRTNode> neighbor = *it;
+        if (this->rrg_r_ < this->compute_cost(random_node->get_state(), neighbor->get_state()) && ) {
+
+        }
+    }
+}
+
+void MotionPlanner::reduce_inconsistency() {
 
 }
 
 bool MotionPlanner::node_in_free_space_check(const std::shared_ptr<RRTNode>& random_node) {
+    return true;
+}
+
+bool MotionPlanner::edge_in_free_space_check(const std::shared_ptr<RRTNode>& node1, const std::shared_ptr<RRTNode>& node2) {
     return true;
 }
 
@@ -140,24 +164,51 @@ void MotionPlanner::saturate(std::shared_ptr<RRTNode> random_node, const std::sh
 }
 
 // inserting a new node
-void MotionPlanner::extend(std::shared_ptr<RRTNode> random_node) {
+bool MotionPlanner::extend(std::shared_ptr<RRTNode> random_node) {
+    // v is random_node, u is neighbor
     // 1. find all nodes within shrinking hyperball in the nearest tree, and their distance
     this->update_neighbors_list(random_node);
-
-    // find parent
-    for (auto it = random_node->nbh.begin(); it != random_node->nbh.end();) {
-        std::shared_ptr<RRTNode> neighbor = it->first;
-        bool feasibility = it->second;
-
-        // compute cost using this neighbor as a parent
-        double inc_cost = this->compute_cost(neighbor->get_state(), random_node->get_state());
-        double cost = this->combine_cost(neighbor->get_cost(), inc_cost);
-        if (this->is_cost_better_than(cost, random_node->get_cost())) {
-            // check range and feasibility
-
-        }
-
+    if (! this->find_best_parent(random_node)) {
+        return false;
     }
+    this->nearest_neighbors_tree_->add(random_node);
+    random_node->parent->children.push_back(random_node);
+
+    // after connecting the parent, now is updating list of v's neighbors
+    for (auto it = random_node->nbh.begin(); it != random_node->nbh.end(); ++it) {
+        std::shared_ptr<RRTNode> neighbor = it->first;
+
+        if (this->edge_in_free_space_check(random_node, neighbor)) {
+            random_node->n0_out.push_back(neighbor);
+            neighbor->nr_in.push_back(random_node);
+        }
+        if (this->edge_in_free_space_check(neighbor, random_node)) {
+            neighbor->nr_out.push_back(random_node);
+            random_node->n0_in.push_back(neighbor);
+        }
+    }
+    return true;
+}
+
+bool MotionPlanner::find_best_parent(std::shared_ptr<RRTNode> random_node) {
+    bool if_find_best_parent = false;
+    for (auto it = random_node->nbh.begin(); it != random_node->nbh.end(); ++it) {
+        std::shared_ptr<RRTNode> neighbor = it->first;
+        // compute cost using this neighbor as a parent
+        double inc_cost = this->compute_cost(random_node->get_state(), neighbor->get_state());  // d(v,u)
+        double cost = this->combine_cost(neighbor->get_lmc(), inc_cost); // d(v,u) + lmc(u)
+        // if lmc(v) > d(v,u) + lmc(u)
+        if (this->is_cost_better_than(cost, random_node->get_lmc()) && this->edge_in_free_space_check(random_node, neighbor)) {
+            it->second = true;
+            // change parent of v to u
+            random_node->parent = neighbor;
+            // update lmc(v)
+            random_node->set_lmc(cost);
+            random_node->set_g_cost(cost);
+            if_find_best_parent = true;
+        }
+    }
+    return if_find_best_parent;
 }
 
 void MotionPlanner::update_neighbors_list(std::shared_ptr<RRTNode> random_node) {

@@ -96,15 +96,23 @@ private:
     // functions in the main loop
     void saturate(std::shared_ptr<RRTNode> random_node, const std::shared_ptr<RRTNode>& nearest_node, double distance) const;
     bool node_in_free_space_check(const std::shared_ptr<RRTNode>& random_node);
-    void extend(std::shared_ptr<RRTNode> random_node);
+    bool edge_in_free_space_check(const std::shared_ptr<RRTNode>& node1, const std::shared_ptr<RRTNode>& node2);
+    bool extend(std::shared_ptr<RRTNode> random_node);
 
     // extend related
     void update_neighbors_list(std::shared_ptr<RRTNode> random_node);
+    bool find_best_parent(std::shared_ptr<RRTNode> random_node);
 
     // cost related members
     double compute_cost(Eigen::Vector3d state1, Eigen::Vector3d state2);
     double combine_cost(double cost1, double cost2);
     bool is_cost_better_than(double cost1, double cost2);
+
+    // rewire
+    double epsilon_ = 0;
+    void rewire_neighbors(std::shared_ptr<RRTNode> random_node);
+    void cull_neighbors(std::shared_ptr<RRTNode> random_node);
+    void reduce_inconsistency();
 };
 
 
