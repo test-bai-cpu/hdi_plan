@@ -124,13 +124,22 @@ bool MotionPlanner::solve() {
 
 void MotionPlanner::rewire_neighbors(std::shared_ptr<RRTNode> random_node) {
     this->cull_neighbors(random_node);
+
+    for (auto it = random_node->nr_out.begin(); it != random_node->nr_out.end(); ++it) {
+        
+    }
 }
 
 void MotionPlanner::cull_neighbors(std::shared_ptr<RRTNode> random_node) {
-    for (auto it = random_node->nr_out.begin(); it != random_node->test.end(); ++it) {
+    for (auto it = random_node->nr_out.begin(); it != random_node->nr_out.end(); ++it) {
         std::shared_ptr<RRTNode> neighbor = *it;
-        if (this->rrg_r_ < this->compute_cost(random_node->get_state(), neighbor->get_state()) && ) {
-
+        if (this->rrg_r_ < this->compute_cost(random_node->get_state(), neighbor->get_state()) && random_node->parent != neighbor) {
+            random_node->nr_out.erase(it);
+            for (auto u_it = neighbor->nr_in.begin(); u_it != neighbor->nr_in.end(); ++u_it) {
+                if (*u_it == random_node) {
+                    neighbor->nr_in.erase(u_it);
+                }
+            }
         }
     }
 }
