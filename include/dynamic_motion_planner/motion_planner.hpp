@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stack>
+#include <queue>
 #include <vector>
 #include <Eigen/Dense>
 #include <memory>
@@ -8,6 +9,7 @@
 
 //ompl
 #include "ompl/datastructures/NearestNeighbors.h"
+#include <ompl/datastructures/BinaryHeap.h>
 #include "ompl/tools/config/SelfConfig.h"
 #include "ompl/datastructures/NearestNeighborsGNAT.h"
 #include <ompl/base/SpaceInformation.h>
@@ -39,7 +41,15 @@ public:
     //publisher to debug
     ros::Publisher pub_quadrotor_state_;
 
+    struct node_compare{
+        bool operator()(const std::shared_ptr<RRTNode>& a, const std::shared_ptr<RRTNode>& b){
+            double a_min_cost = std::min(a->get_lmc(), a->get_g_cost());
+            double b_min_cost = std::min(b->get_lmc(), b->get_g_cost());
 
+            if (a_min_cost == b_min_cost) return a->get_g_cost() > b->get_g_cost();
+            return a_min_cost > b_min_cost;
+        }
+    };
 private:
     // debug
     int debug{0};
@@ -110,9 +120,16 @@ private:
 
     // rewire
     double epsilon_ = 0;
+
+
+    // cannot use priority queue since we need to update the key value
+    //std::priority_queue<std::shared_ptr<RRTNode>, std::vector<std::shared_ptr<RRTNode>>, node_compare> node_queue1;
+    ompl::BinaryHeap<std::shared_ptr<RRTNode>, node_compare> node_queue;
     void rewire_neighbors(std::shared_ptr<RRTNode> random_node);
     void cull_neighbors(std::shared_ptr<RRTNode> random_node);
+    void verify_queue(std::shared_ptr<RRTNode> node);
     void reduce_inconsistency();
+
 };
 
 

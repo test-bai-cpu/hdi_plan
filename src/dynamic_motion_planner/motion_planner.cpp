@@ -124,9 +124,22 @@ bool MotionPlanner::solve() {
 
 void MotionPlanner::rewire_neighbors(std::shared_ptr<RRTNode> random_node) {
     this->cull_neighbors(random_node);
-
-    for (auto it = random_node->nr_out.begin(); it != random_node->nr_out.end(); ++it) {
-        
+    std::vector<std::shared_ptr<RRTNode>> n_in;
+    n_in.insert(n_in.end(), random_node->n0_in.begin(), random_node->n0_in.end());
+    n_in.insert(n_in.end(), random_node->nr_in.begin(), random_node->nr_in.end());
+    for (auto it = n_in.begin(); it != n_in.end(); ++it) {
+        std::shared_ptr<RRTNode> neighbor = *it;
+        if (random_node->parent == neighbor) {
+            continue;
+        }
+        double new_lmc_if_choose_random_node_as_parent = random_node->get_lmc()+this->compute_cost(random_node->get_state(),neighbor->get_state());
+        if (this->is_cost_better_than(new_lmc_if_choose_random_node_as_parent, neighbor->get_lmc())) {
+            neighbor->set_lmc(new_lmc_if_choose_random_node_as_parent);
+            neighbor->parent = random_node;
+        }
+        if (neighbor->get_g_cost() - neighbor->get_lmc() > this->epsilon_) {
+            this->verify_queue(neighbor);
+        }
     }
 }
 
@@ -138,14 +151,26 @@ void MotionPlanner::cull_neighbors(std::shared_ptr<RRTNode> random_node) {
             for (auto u_it = neighbor->nr_in.begin(); u_it != neighbor->nr_in.end(); ++u_it) {
                 if (*u_it == random_node) {
                     neighbor->nr_in.erase(u_it);
+                    break;
                 }
             }
+            break;
         }
     }
 }
 
-void MotionPlanner::reduce_inconsistency() {
+void MotionPlanner::verify_queue(std::shared_ptr<RRTNode> node) {
+    if (node->handle != nullptr) {
+        this->node_queue.update(node->handle);
+    } else {
+        node->handle = this->node_queue.insert(node);
+    }
+}
 
+void MotionPlanner::reduce_inconsistency() {
+    while (!this->node_queue.empty()) {
+
+    }
 }
 
 bool MotionPlanner::node_in_free_space_check(const std::shared_ptr<RRTNode>& random_node) {

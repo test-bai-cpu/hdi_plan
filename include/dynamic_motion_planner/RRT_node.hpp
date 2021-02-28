@@ -2,6 +2,10 @@
 
 #include <Eigen/Dense>
 #include <memory>
+#include <ompl/datastructures/BinaryHeap.h>
+
+#include "dynamic_motion_planner/motion_planner.hpp"
+
 namespace hdi_plan {
 
 class RRTNode {
@@ -51,9 +55,9 @@ public:
     std::vector<std::shared_ptr<RRTNode>> nr_in; // -
     std::vector<std::shared_ptr<RRTNode>> nr_out; // +
 
-    std::vector<std::shared_ptr<RRTNode>> test;
+    bool in_queue = false;
 
-
+    ompl::BinaryHeap<std::shared_ptr<RRTNode>, MotionPlanner::node_compare>::Element *handle;
 
 
 private:
