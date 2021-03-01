@@ -22,8 +22,7 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh, const ros::NodeHandle &p
 MotionPlanner::~MotionPlanner() = default;
 
 double MotionPlanner::distance_function(const std::shared_ptr<RRTNode>& a, const std::shared_ptr<RRTNode>& b) {
-    //Todo: implement how to calculate the distance between two rrt nodes here
-    return 1.0;
+    return this->compute_cost(a->get_state(), b->get_state());
 }
 
 void MotionPlanner::setup() {
@@ -48,14 +47,6 @@ void MotionPlanner::setup_space() {
 
 ompl::base::RealVectorBounds MotionPlanner::get_space_info() {
     return this->space_->getBounds();
-}
-
-unsigned int MotionPlanner::get_dim() {
-    return this->space_->getDimension();
-}
-
-int MotionPlanner::get_debug() {
-    return this->debug;
 }
 
 double MotionPlanner::get_nn_size() {
@@ -87,10 +78,11 @@ void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr 
     } else {
         ROS_INFO("Already reach the goal. Will exit.");
         // need to implement how to exit here. And other data collection like: total time. total length of executed trajectory.
+        this->sub_quadrotor_state_.shutdown();
     }
 }
 
-double MotionPlanner::get_distance_between_states(Eigen::Vector3d state1, Eigen::Vector3d state2) {
+double MotionPlanner::get_distance_between_states(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2) {
     return static_cast<double>(std::sqrt((state1 - state2).squaredNorm()));
 }
 
@@ -169,7 +161,40 @@ void MotionPlanner::verify_queue(std::shared_ptr<RRTNode> node) {
 
 void MotionPlanner::reduce_inconsistency() {
     while (!this->node_queue.empty()) {
+        std::shared_ptr<RRTNode> min = this->node_queue.top()->data;
+        this->node_queue.pop();
+        min->handle = nullptr;
 
+        if (min->get_g_cost() - min->get_lmc() > this->epsilon_) {
+            this->update_lmc(min);
+            this->rewire_neighbors(min);
+        }
+
+        min->set_g_cost(min->get_lmc());
+    }
+}
+
+void MotionPlanner::update_lmc(std::shared_ptr<RRTNode> node) {
+    this->cull_neighbors(node);
+
+    std::vector<std::shared_ptr<RRTNode>> n_out;
+    n_out.insert(n_out.end(), node->n0_out.begin(), node->n0_out.end());
+    n_out.insert(n_out.end(), node->nr_out.begin(), node->nr_out.end());
+
+    for (auto it = n_out.begin(); it != n_out.end(); ++it) {
+        std::shared_ptr<RRTNode> neighbor = *it;
+        if (neighbor->parent == node) {
+            continue;
+        }
+        double inc_cost = this->compute_cost(node->get_state(), neighbor->get_state());  // d(v,u)
+        double cost = this->combine_cost(neighbor->get_lmc(), inc_cost); // d(v,u) + lmc(u)
+        // if lmc(v) > d(v,u) + lmc(u)
+        if (this->is_cost_better_than(cost, node->get_lmc()) && this->edge_in_free_space_check(node, neighbor)) {
+            // change parent of v to u
+            node->parent = neighbor;
+            // update lmc(v)
+            node->set_lmc(cost);
+        }
     }
 }
 
@@ -238,7 +263,6 @@ bool MotionPlanner::find_best_parent(std::shared_ptr<RRTNode> random_node) {
             random_node->parent = neighbor;
             // update lmc(v)
             random_node->set_lmc(cost);
-            random_node->set_g_cost(cost);
             if_find_best_parent = true;
         }
     }
@@ -254,7 +278,7 @@ void MotionPlanner::update_neighbors_list(std::shared_ptr<RRTNode> random_node) 
     std::transform(nbh.begin(), nbh.end(), random_node->nbh.begin(), [](std::shared_ptr<RRTNode> node) { return std::pair<std::shared_ptr<RRTNode>, bool>(node, false);});
 }
 
-double MotionPlanner::compute_cost(Eigen::Vector3d state1, Eigen::Vector3d state2) {
+double MotionPlanner::compute_cost(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2) {
     //Todo: implement how to compute cost by the map here, need more discussion
     return static_cast<double>(std::sqrt((state1 - state2).squaredNorm()));
 }

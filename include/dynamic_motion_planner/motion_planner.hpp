@@ -5,7 +5,7 @@
 #include <vector>
 #include <Eigen/Dense>
 #include <memory>
-#include <math.h>
+#include <cmath>
 
 //ompl
 #include "ompl/datastructures/NearestNeighbors.h"
@@ -35,8 +35,6 @@ public:
 
     // debug
     ompl::base::RealVectorBounds get_space_info();
-    unsigned int get_dim();
-    int get_debug();
     double get_nn_size();
     //publisher to debug
     ros::Publisher pub_quadrotor_state_;
@@ -95,13 +93,13 @@ private:
     bool solve();
 
     // unitilites
-    double get_distance_between_states(Eigen::Vector3d state1, Eigen::Vector3d state2);
+    double get_distance_between_states(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2);
 
     // for calculate the shrinking ball radius
     void calculateRRG();
     double max_distance_{0.}; // the maximum length of a motion to be added to a tree
     double r_rrt_{0.}; // a constant for r-disc rewiring calculations
-    double rrg_r_; // current value of the radius used for the neighbors
+    double rrg_r_{0.}; // current value of the radius used for the neighbors
 
     // functions in the main loop
     void saturate(std::shared_ptr<RRTNode> random_node, const std::shared_ptr<RRTNode>& nearest_node, double distance) const;
@@ -114,7 +112,7 @@ private:
     bool find_best_parent(std::shared_ptr<RRTNode> random_node);
 
     // cost related members
-    double compute_cost(Eigen::Vector3d state1, Eigen::Vector3d state2);
+    double compute_cost(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2);
     double combine_cost(double cost1, double cost2);
     bool is_cost_better_than(double cost1, double cost2);
 
@@ -129,6 +127,7 @@ private:
     void cull_neighbors(std::shared_ptr<RRTNode> random_node);
     void verify_queue(std::shared_ptr<RRTNode> node);
     void reduce_inconsistency();
+    void update_lmc(std::shared_ptr<RRTNode> node);
 
 };
 
