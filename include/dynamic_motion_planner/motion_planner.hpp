@@ -6,7 +6,7 @@
 #include <Eigen/Dense>
 #include <memory>
 #include <cmath>
-
+#include <limits>
 //ompl
 #include "ompl/datastructures/NearestNeighbors.h"
 #include <ompl/datastructures/BinaryHeap.h>
@@ -16,9 +16,11 @@
 #include <ompl/base/spaces/SE3StateSpace.h>
 #include <ompl/config.h>
 
+
 //ros
 #include <ros/ros.h>
 #include <nav_msgs/Odometry.h>
+#include <geometry_msgs/PoseStamped.h>
 
 #include "dynamic_motion_planner/node_list.hpp"
 #include "dynamic_motion_planner/edge.hpp"
@@ -52,6 +54,7 @@ private:
     std::shared_ptr<RRTNode> start_;
     std::shared_ptr<RRTNode> goal_;
     std::shared_ptr<RRTNode> quadrotor_;
+
     // space configuration
     ompl::base::SpaceInformationPtr si_;
     std::shared_ptr<ompl::base::SE3StateSpace> space_;
@@ -64,6 +67,8 @@ private:
     // setup
     void setup();
     double distance_function(const std::shared_ptr<RRTNode>& a, const std::shared_ptr<RRTNode>& b) ;
+    void set_to_start_position();
+    bool position_ready{false};
 
     //
     std::shared_ptr<RRTNode> generate_random_node();
@@ -72,23 +77,20 @@ private:
     Eigen::Vector3d quadrotor_state_;
 
     // subscriber
-    void setup_sub();
     ros::Subscriber sub_quadrotor_state_;
     void quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg);
 
     // publisher
     ros::Publisher pub_solution_path_;
+
     // main loop
     bool solve();
 
-    // unitilites
-    double get_distance_between_states(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2);
-
     // for calculate the shrinking ball radius
     void calculateRRG();
-    double max_distance_{0.}; // the maximum length of a motion to be added to a tree
-    double r_rrt_{0.}; // a constant for r-disc rewiring calculations
-    double rrg_r_{0.}; // current value of the radius used for the neighbors
+    double max_distance_{0.1}; // the maximum length of a motion to be added to a tree
+    double r_rrt_{0.5}; // a constant for r-disc rewiring calculations
+    double rrg_r_{0.5}; // current value of the radius used for the neighbors
 
     // functions in the main loop
     void saturate(std::shared_ptr<RRTNode> random_node, const std::shared_ptr<RRTNode>& nearest_node, double distance) const;
@@ -107,8 +109,7 @@ private:
     bool is_cost_better_than(double cost1, double cost2);
 
     // rewire
-    double epsilon_ = 0;
-
+    double epsilon_{0.5};
 
     // cannot use priority queue since we need to update the key value
     //std::priority_queue<std::shared_ptr<RRTNode>, std::vector<std::shared_ptr<RRTNode>>, node_compare> node_queue1;

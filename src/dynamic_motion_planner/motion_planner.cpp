@@ -13,10 +13,10 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh, const ros::NodeHandle &p
     // initialization
     ROS_INFO("Initialization");
     this->nearest_neighbors_tree_->add(this->goal_);
-    //this->nearest_neighbors_tree_->add(this->start_);
+
     // initialization subscribers
     this->sub_quadrotor_state_ = nh_.subscribe("hdi_plan/quadrotor_state", 1, &MotionPlanner::quadrotor_state_callback, this);
-    this->pub_solution_path_ = nh_.advertise<nav_msgs::Odometry>("hdi_plan/solution_path", 1);
+    this->pub_solution_path_ = nh_.advertise<geometry_msgs::PoseStamped>("command/pose", 1);
 }
 
 MotionPlanner::~MotionPlanner() = default;
@@ -31,9 +31,23 @@ void MotionPlanner::setup() {
     //this->quadrotor_ = std::make_shared<RRTNode>(start_position);
     Eigen::Vector3d goal_position(10,10,10);
     this->goal_ = std::make_shared<RRTNode>(goal_position);
+    this->goal_->set_lmc(0);
+    this->goal_->set_g_cost(0);
 
     this->nearest_neighbors_tree_ = std::make_shared<ompl::NearestNeighborsGNAT<std::shared_ptr<RRTNode>>>();
     this->nearest_neighbors_tree_->setDistanceFunction([this](const std::shared_ptr<RRTNode>& a, const std::shared_ptr<RRTNode>& b) { return distance_function(a, b); });
+}
+
+void MotionPlanner::set_to_start_position() {
+    Eigen::Vector3d start_position = this->start_->get_state();
+
+    geometry_msgs::PoseStamped msg;
+    msg.pose.position.x = start_position(0);
+    msg.pose.position.y = start_position(1);
+    msg.pose.position.z = start_position(2);
+    this->pub_solution_path_.publish(msg);
+
+    this->position_ready = true;
 }
 
 void MotionPlanner::setup_space() {
@@ -61,16 +75,12 @@ std::shared_ptr<RRTNode> MotionPlanner::generate_random_node() {
     return random_node;
 }
 
-void MotionPlanner::setup_sub() {
-    // initialize subscriber call backs
-
-}
-
 void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg) {
+    ros::Duration(5.0).sleep();
     Eigen::Vector3d quadrotor_state(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
     this->quadrotor_state_ = quadrotor_state;
-    //this->quadrotor_ = std::make_shared<RRTNode>(quadrotor_state);
-    if (this->get_distance_between_states(quadrotor_state, this->goal_->get_state()) > 0.1) {
+    this->quadrotor_ = std::make_shared<RRTNode>(quadrotor_state);
+    if (this->compute_cost(quadrotor_state, this->goal_->get_state()) > 0.1) {
         this->solve();
     } else {
         ROS_INFO("Already reach the goal. Will exit.");
@@ -79,36 +89,33 @@ void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr 
     }
 }
 
-double MotionPlanner::get_distance_between_states(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2) {
-    return static_cast<double>(std::sqrt((state1 - state2).squaredNorm()));
-}
-
 bool MotionPlanner::solve() {
+    if(!position_ready) {
+        this->set_to_start_position();
+    }
+
     this->calculateRRG();
 
     // sample random state
-    
     // need to implement how to generate random state here, by adding the info of updating obstacles
     std::shared_ptr<RRTNode> random_node = generate_random_node();
 
     // find the closest node in the tree
     std::shared_ptr<RRTNode> nearest_node = this->nearest_neighbors_tree_->nearest(random_node);
-    double distance = this->get_distance_between_states(random_node->get_state(), nearest_node->get_state());
+    double distance = this->compute_cost(random_node->get_state(), nearest_node->get_state());
+
     if (distance > this->max_distance_) {
         this->saturate(random_node, nearest_node, distance);
     }
 
-    if (!this->node_in_free_space_check(random_node)) {
-        return false;
-    }
-
+    // Todo: Question: even when no random_node added, do we need to publish the solution path?
     if (!this->extend(random_node)) {
         return false;
     }
-
+    ROS_INFO("TEST3");
     this->rewire_neighbors(random_node);
     this->reduce_inconsistency();
-
+    ROS_INFO("TEST4");
     if (this->update_solution_path()) {
         this->publish_solution_path();
     }
@@ -119,6 +126,10 @@ bool MotionPlanner::update_solution_path() {
     bool if_find_solution = false;
 
     std::shared_ptr<RRTNode> nearest_node_of_quadrotor = this->nearest_neighbors_tree_->nearest(this->quadrotor_);
+
+    ROS_INFO("update solution");
+    double cost_test = this->compute_cost(nearest_node_of_quadrotor->get_state(), this->quadrotor_->get_state());
+    std::cout << "here is the cost: " << cost_test << std::endl;
     if (this->compute_cost(nearest_node_of_quadrotor->get_state(), this->quadrotor_->get_state()) > this->max_distance_) {
         return if_find_solution;
     }
@@ -140,10 +151,17 @@ bool MotionPlanner::update_solution_path() {
 
 void MotionPlanner::publish_solution_path() {
     Eigen::Vector3d next_position = this->solution_path.front();
+    geometry_msgs::PoseStamped msg;
+    msg.pose.position.x = next_position(0);
+    msg.pose.position.y = next_position(1);
+    msg.pose.position.z = next_position(2);
+    this->pub_solution_path_.publish(msg);
 
+    ROS_INFO("Sending solution path to quadrotor");
 }
 
 void MotionPlanner::rewire_neighbors(std::shared_ptr<RRTNode> random_node) {
+    // if this step is for random_node, then Nr of v is empty, fo cull_neighbor will not cull any nodes
     this->cull_neighbors(random_node);
     std::vector<std::shared_ptr<RRTNode>> n_in;
     n_in.insert(n_in.end(), random_node->n0_in.begin(), random_node->n0_in.end());
@@ -153,7 +171,7 @@ void MotionPlanner::rewire_neighbors(std::shared_ptr<RRTNode> random_node) {
         if (random_node->parent == neighbor) {
             continue;
         }
-        double new_lmc_if_choose_random_node_as_parent = random_node->get_lmc()+this->compute_cost(random_node->get_state(),neighbor->get_state());
+        double new_lmc_if_choose_random_node_as_parent = random_node->get_lmc()+this->compute_cost(neighbor->get_state(), random_node->get_state());
         if (this->is_cost_better_than(new_lmc_if_choose_random_node_as_parent, neighbor->get_lmc())) {
             neighbor->set_lmc(new_lmc_if_choose_random_node_as_parent);
             neighbor->parent = random_node;
@@ -189,6 +207,7 @@ void MotionPlanner::verify_queue(std::shared_ptr<RRTNode> node) {
 }
 
 void MotionPlanner::reduce_inconsistency() {
+    //Todo: have not add the part of keyless, Q, vbot condition check
     while (!this->node_queue.empty()) {
         std::shared_ptr<RRTNode> min = this->node_queue.top()->data;
         this->node_queue.pop();
@@ -207,6 +226,8 @@ void MotionPlanner::reduce_inconsistency() {
         this->node_queue.pop();
     }
     this->node_queue.clear();
+
+    ROS_INFO("REDUCE INCONSISTENCY");
 }
 
 void MotionPlanner::update_lmc(std::shared_ptr<RRTNode> node) {
@@ -248,6 +269,10 @@ bool MotionPlanner::edge_in_free_space_check_using_state(const Eigen::Vector3d& 
 void MotionPlanner::calculateRRG() {
     auto num_of_nodes_in_tree = static_cast<double>(this->nearest_neighbors_tree_->size());
     this->rrg_r_ = std::min(this->max_distance_, this->r_rrt_ * std::pow(log(num_of_nodes_in_tree)/num_of_nodes_in_tree, 1/static_cast<double>(this->dimension_)));
+    if (this->rrg_r_ == 0) {
+        this->rrg_r_ = this->max_distance_ + 0.1;
+    }
+    std::cout << "The rrg_r_ is " << this->rrg_r_ << std::endl;
 }
 
 void MotionPlanner::saturate(std::shared_ptr<RRTNode> random_node, const std::shared_ptr<RRTNode>& nearest_node, double distance) const {
@@ -257,12 +282,15 @@ void MotionPlanner::saturate(std::shared_ptr<RRTNode> random_node, const std::sh
     double x = (random_node_state(0) - nearest_node_state(0)) * this->max_distance_ / distance + nearest_node_state(0);
     double y = (random_node_state(1) - nearest_node_state(1)) * this->max_distance_ / distance + nearest_node_state(1);
     double z = (random_node_state(2) - nearest_node_state(2)) * this->max_distance_ / distance + nearest_node_state(2);
-    ROS_INFO("Change the position of random node to be closer to nearest node");
+    //ROS_INFO("Change the position of random node to be closer to nearest node");
     random_node->set_state_by_value(x,y,z);
 }
 
 // inserting a new node
 bool MotionPlanner::extend(std::shared_ptr<RRTNode> random_node) {
+    if (!this->node_in_free_space_check(random_node)) {
+        return false;
+    }
     // v is random_node, u is neighbor
     // 1. find all nodes within shrinking hyperball in the nearest tree, and their distance
     this->update_neighbors_list(random_node);
@@ -302,6 +330,7 @@ bool MotionPlanner::find_best_parent(std::shared_ptr<RRTNode> random_node) {
             random_node->parent = neighbor;
             // update lmc(v)
             random_node->set_lmc(cost);
+            random_node->set_g_cost(cost);
             if_find_best_parent = true;
         }
     }

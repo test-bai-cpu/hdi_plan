@@ -2,6 +2,7 @@
 
 #include <Eigen/Dense>
 #include <memory>
+#include <limits>
 #include <ompl/datastructures/BinaryHeap.h>
 
 namespace hdi_plan {
@@ -69,29 +70,27 @@ public:
 
 private:
     // data used for KD Tree
-    bool kd_in_tree = false;
-    bool kd_parent_exist = false;
-    bool kd_child_left_exist = false;
-    bool kd_child_right_exist = false;
+    bool kd_in_tree{false};
+    bool kd_parent_exist{false};
+    bool kd_child_left_exist{false};
+    bool kd_child_right_exist{false};
     int kd_split;
 
 
     // data used for heap in KNN-search
-    int heap_index = -1;
-    bool in_heap = false;
+    int heap_index{-1};
+    bool in_heap{false};
 
     //position, the state
     Eigen::Vector3d state_;
 
     // data used for RRTx
-    bool in_os_queue_ = false;
-    bool is_move_goal_ = false;
+    bool in_os_queue_{false};
+    bool is_move_goal_{false};
 
     // cost related
-    double cost_ = 0;
-    double inc_cost_ = 0;
-    double lmc_ = 0;
-    double g_cost_ = 0;
+    double lmc_;
+    double g_cost_;
 
 
 

@@ -6,6 +6,9 @@ namespace hdi_plan {
 
 RRTNode::RRTNode(Eigen::Vector3d state) {
     this->state_= state;
+    double inf = std::numeric_limits<double>::infinity();
+    this->lmc_ = inf;
+    this->g_cost_ = inf;
 }
 
 RRTNode::~RRTNode() {
