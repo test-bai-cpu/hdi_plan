@@ -12,11 +12,11 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh, const ros::NodeHandle &p
 
     // initialization
     ROS_INFO("Initialization");
-    this->nearest_neighbors_tree_->add(this->root_);
-
+    this->nearest_neighbors_tree_->add(this->goal_);
+    //this->nearest_neighbors_tree_->add(this->start_);
     // initialization subscribers
     this->sub_quadrotor_state_ = nh_.subscribe("hdi_plan/quadrotor_state", 1, &MotionPlanner::quadrotor_state_callback, this);
-    //this->pub_quadrotor_state_ = nh_.advertise<nav_msgs::Odometry>("hdi_plan/quadrotor_debug", 1);
+    this->pub_solution_path_ = nh_.advertise<nav_msgs::Odometry>("hdi_plan/solution_path", 1);
 }
 
 MotionPlanner::~MotionPlanner() = default;
@@ -26,13 +26,14 @@ double MotionPlanner::distance_function(const std::shared_ptr<RRTNode>& a, const
 }
 
 void MotionPlanner::setup() {
-    Eigen::Vector3d root_position(0,0,0);
-    root_ = std::make_shared<RRTNode>(root_position);
+    Eigen::Vector3d start_position(0,0,0);
+    this->start_ = std::make_shared<RRTNode>(start_position);
+    //this->quadrotor_ = std::make_shared<RRTNode>(start_position);
     Eigen::Vector3d goal_position(10,10,10);
-    goal_ = std::make_shared<RRTNode>(goal_position);
+    this->goal_ = std::make_shared<RRTNode>(goal_position);
 
-    nearest_neighbors_tree_ = std::make_shared<ompl::NearestNeighborsGNAT<std::shared_ptr<RRTNode>>>();
-    nearest_neighbors_tree_->setDistanceFunction([this](const std::shared_ptr<RRTNode>& a, const std::shared_ptr<RRTNode>& b) { return distance_function(a, b); });
+    this->nearest_neighbors_tree_ = std::make_shared<ompl::NearestNeighborsGNAT<std::shared_ptr<RRTNode>>>();
+    this->nearest_neighbors_tree_->setDistanceFunction([this](const std::shared_ptr<RRTNode>& a, const std::shared_ptr<RRTNode>& b) { return distance_function(a, b); });
 }
 
 void MotionPlanner::setup_space() {
@@ -68,11 +69,7 @@ void MotionPlanner::setup_sub() {
 void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg) {
     Eigen::Vector3d quadrotor_state(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
     this->quadrotor_state_ = quadrotor_state;
-    this->debug += 1;
-    //ROS_INFO("Check if reach the goal region: ");
-
-    //ROS_INFO("Now trigger the main loop of dynamic planner");
-    //this->pub_quadrotor_state_.publish(msg);
+    //this->quadrotor_ = std::make_shared<RRTNode>(quadrotor_state);
     if (this->get_distance_between_states(quadrotor_state, this->goal_->get_state()) > 0.1) {
         this->solve();
     } else {
@@ -111,6 +108,38 @@ bool MotionPlanner::solve() {
 
     this->rewire_neighbors(random_node);
     this->reduce_inconsistency();
+
+    if (this->update_solution_path()) {
+        this->publish_solution_path();
+    }
+    return true;
+}
+
+bool MotionPlanner::update_solution_path() {
+    bool if_find_solution = false;
+
+    std::shared_ptr<RRTNode> nearest_node_of_quadrotor = this->nearest_neighbors_tree_->nearest(this->quadrotor_);
+    if (this->compute_cost(nearest_node_of_quadrotor->get_state(), this->quadrotor_->get_state()) > this->max_distance_) {
+        return if_find_solution;
+    }
+    if (!this->edge_in_free_space_check(this->quadrotor_, nearest_node_of_quadrotor)) {
+        return if_find_solution;
+    }
+    this->solution_path.push_back(nearest_node_of_quadrotor->get_state());
+    std::shared_ptr<RRTNode> intermediate_node = nearest_node_of_quadrotor->parent;
+    while (intermediate_node->parent != nullptr) {
+        this->solution_path.push_back(intermediate_node->get_state());
+        if (intermediate_node == this->goal_) {
+            if_find_solution = true;
+            break;
+        }
+        intermediate_node = intermediate_node->parent;
+    }
+    return if_find_solution;
+}
+
+void MotionPlanner::publish_solution_path() {
+    Eigen::Vector3d next_position = this->solution_path.front();
 
 }
 
@@ -172,6 +201,12 @@ void MotionPlanner::reduce_inconsistency() {
 
         min->set_g_cost(min->get_lmc());
     }
+
+    while (!this->node_queue.empty()) {
+        this->node_queue.top()->data->handle = nullptr;
+        this->node_queue.pop();
+    }
+    this->node_queue.clear();
 }
 
 void MotionPlanner::update_lmc(std::shared_ptr<RRTNode> node) {
@@ -203,6 +238,10 @@ bool MotionPlanner::node_in_free_space_check(const std::shared_ptr<RRTNode>& ran
 }
 
 bool MotionPlanner::edge_in_free_space_check(const std::shared_ptr<RRTNode>& node1, const std::shared_ptr<RRTNode>& node2) {
+    return true;
+}
+
+bool MotionPlanner::edge_in_free_space_check_using_state(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2) {
     return true;
 }
 

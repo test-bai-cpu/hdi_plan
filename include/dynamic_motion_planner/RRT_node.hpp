@@ -4,8 +4,6 @@
 #include <memory>
 #include <ompl/datastructures/BinaryHeap.h>
 
-#include "dynamic_motion_planner/motion_planner.hpp"
-
 namespace hdi_plan {
 
 class RRTNode {
@@ -22,7 +20,7 @@ public:
         return this->lmc_;
     };
 
-    double set_lmc(double lmc) {
+    void set_lmc(double lmc) {
         this->lmc_ = lmc;
     };
 
@@ -30,14 +28,14 @@ public:
         return this->g_cost_;
     };
 
-    double set_g_cost(double g_cost) {
+    void set_g_cost(double g_cost) {
         this->g_cost_ = g_cost;
     };
 
-    Eigen::Vector3d set_state_by_vector(Eigen::Vector3d new_state) {
+    void set_state_by_vector(Eigen::Vector3d new_state) {
         this->state_ = new_state;
     };
-    Eigen::Vector3d set_state_by_value(double x, double y, double z) {
+    void set_state_by_value(double x, double y, double z) {
         this->state_(0) = x;
         this->state_(1) = y;
         this->state_(2) = z;
@@ -57,7 +55,16 @@ public:
 
     bool in_queue = false;
 
-    ompl::BinaryHeap<std::shared_ptr<RRTNode>, MotionPlanner::node_compare>::Element *handle;
+    struct node_compare{
+        bool operator()(const std::shared_ptr<RRTNode>& a, const std::shared_ptr<RRTNode>& b){
+            double a_min_cost = std::min(a->get_lmc(), a->get_g_cost());
+            double b_min_cost = std::min(b->get_lmc(), b->get_g_cost());
+
+            if (a_min_cost == b_min_cost) return a->get_g_cost() > b->get_g_cost();
+            return a_min_cost > b_min_cost;
+        }
+    };
+    ompl::BinaryHeap<std::shared_ptr<RRTNode>, node_compare>::Element *handle;
 
 
 private:

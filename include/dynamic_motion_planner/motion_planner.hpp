@@ -36,18 +36,7 @@ public:
     // debug
     ompl::base::RealVectorBounds get_space_info();
     double get_nn_size();
-    //publisher to debug
-    ros::Publisher pub_quadrotor_state_;
 
-    struct node_compare{
-        bool operator()(const std::shared_ptr<RRTNode>& a, const std::shared_ptr<RRTNode>& b){
-            double a_min_cost = std::min(a->get_lmc(), a->get_g_cost());
-            double b_min_cost = std::min(b->get_lmc(), b->get_g_cost());
-
-            if (a_min_cost == b_min_cost) return a->get_g_cost() > b->get_g_cost();
-            return a_min_cost > b_min_cost;
-        }
-    };
 private:
     // debug
     int debug{0};
@@ -60,9 +49,9 @@ private:
     std::stack<std::vector<Eigen::Vector3d>> sample_stack;
 
     // useful rrt nodes
-    std::shared_ptr<RRTNode> root_;
+    std::shared_ptr<RRTNode> start_;
     std::shared_ptr<RRTNode> goal_;
-
+    std::shared_ptr<RRTNode> quadrotor_;
     // space configuration
     ompl::base::SpaceInformationPtr si_;
     std::shared_ptr<ompl::base::SE3StateSpace> space_;
@@ -88,7 +77,7 @@ private:
     void quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg);
 
     // publisher
-
+    ros::Publisher pub_solution_path_;
     // main loop
     bool solve();
 
@@ -105,6 +94,7 @@ private:
     void saturate(std::shared_ptr<RRTNode> random_node, const std::shared_ptr<RRTNode>& nearest_node, double distance) const;
     bool node_in_free_space_check(const std::shared_ptr<RRTNode>& random_node);
     bool edge_in_free_space_check(const std::shared_ptr<RRTNode>& node1, const std::shared_ptr<RRTNode>& node2);
+    bool edge_in_free_space_check_using_state(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2);
     bool extend(std::shared_ptr<RRTNode> random_node);
 
     // extend related
@@ -122,13 +112,17 @@ private:
 
     // cannot use priority queue since we need to update the key value
     //std::priority_queue<std::shared_ptr<RRTNode>, std::vector<std::shared_ptr<RRTNode>>, node_compare> node_queue1;
-    ompl::BinaryHeap<std::shared_ptr<RRTNode>, node_compare> node_queue;
+    ompl::BinaryHeap<std::shared_ptr<RRTNode>, RRTNode::node_compare> node_queue;
     void rewire_neighbors(std::shared_ptr<RRTNode> random_node);
     void cull_neighbors(std::shared_ptr<RRTNode> random_node);
     void verify_queue(std::shared_ptr<RRTNode> node);
     void reduce_inconsistency();
     void update_lmc(std::shared_ptr<RRTNode> node);
 
+    // find the solution path
+    std::vector<Eigen::Vector3d> solution_path;
+    bool update_solution_path();
+    void publish_solution_path();
 };
 
 
