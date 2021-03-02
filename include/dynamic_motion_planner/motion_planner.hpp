@@ -7,6 +7,8 @@
 #include <memory>
 #include <cmath>
 #include <limits>
+#include <cstdlib>
+#include <time.h>
 //ompl
 #include "ompl/datastructures/NearestNeighbors.h"
 #include <ompl/datastructures/BinaryHeap.h>
@@ -88,8 +90,8 @@ private:
 
     // for calculate the shrinking ball radius
     void calculateRRG();
-    double max_distance_{0.1}; // the maximum length of a motion to be added to a tree
-    double r_rrt_{0.5}; // a constant for r-disc rewiring calculations
+    double max_distance_{0.5}; // the maximum length of a motion to be added to a tree
+    double r_rrt_{1}; // a constant for r-disc rewiring calculations
     double rrg_r_{0.5}; // current value of the radius used for the neighbors
 
     // functions in the main loop
