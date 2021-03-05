@@ -33,7 +33,7 @@ void MotionPlanner::setup() {
     Eigen::Vector3d start_position(0,0,0);
     this->start_ = std::make_shared<RRTNode>(start_position);
     //this->quadrotor_ = std::make_shared<RRTNode>(start_position);
-    Eigen::Vector3d goal_position(0.8,0.8,0.8);
+    Eigen::Vector3d goal_position(2.5,2.5,2.5);
     this->goal_ = std::make_shared<RRTNode>(goal_position);
     this->goal_->set_lmc(0);
     this->goal_->set_g_cost(0);
@@ -75,7 +75,7 @@ double MotionPlanner::get_nn_size() {
 // not the static function, need to use the space config
 std::shared_ptr<RRTNode> MotionPlanner::generate_random_node() {
     double lower_bound = 0;
-    double upper_bound = 1;
+    double upper_bound = 3;
     double x = lower_bound + (rand()/double(RAND_MAX)*(upper_bound - lower_bound));
     double y = lower_bound + (rand()/double(RAND_MAX)*(upper_bound - lower_bound));
     double z = lower_bound + (rand()/double(RAND_MAX)*(upper_bound - lower_bound));
@@ -86,7 +86,7 @@ std::shared_ptr<RRTNode> MotionPlanner::generate_random_node() {
 }
 
 void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg) {
-    ros::Duration(3.0).sleep();
+    //ros::Duration(0.5).sleep();
     Eigen::Vector3d quadrotor_state(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
     this->quadrotor_state_ = quadrotor_state;
     this->quadrotor_ = std::make_shared<RRTNode>(quadrotor_state);
@@ -99,6 +99,8 @@ void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr 
 }
 
 bool MotionPlanner::solve() {
+    this->count += 1;
+    std::cout << "The iteration number is: " << this->count << std::endl;
     if(!position_ready) {
         this->set_to_start_position();
     }
@@ -141,10 +143,10 @@ bool MotionPlanner::update_solution_path() {
 
     std::cout << "The distance from current position to nearest node: " << cost_to_nearest_node << std::endl;
     if (cost_to_nearest_node > this->max_distance_) {
-        return if_find_solution;
+        return if_find_solution; // return false, fail to find solution
     }
     if (!this->edge_in_free_space_check(this->quadrotor_, nearest_node_of_quadrotor)) {
-        return if_find_solution;
+        return if_find_solution; // return false, fail to find solution
     }
 
     this->solution_path.clear();

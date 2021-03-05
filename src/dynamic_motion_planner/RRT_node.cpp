@@ -9,6 +9,7 @@ RRTNode::RRTNode(Eigen::Vector3d state) {
     double inf = std::numeric_limits<double>::infinity();
     this->lmc_ = inf;
     this->g_cost_ = inf;
+    this->handle = nullptr;
 }
 
 RRTNode::~RRTNode() {
