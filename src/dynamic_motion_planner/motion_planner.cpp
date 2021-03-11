@@ -120,7 +120,7 @@ bool MotionPlanner::solve() {
         this->saturate(random_node, nearest_node, distance);
     }
 
-    // Todo: Question: even when no random_node added, do we need to publish the solution path?
+    // Todo: Question: even when no random_node added, do we need to publish the solution path? YES, because when the environment changes, the solution path will change as well.
     if (!this->extend(random_node)) {
         return false;
     }
@@ -188,6 +188,9 @@ void MotionPlanner::publish_solution_path() {
 void MotionPlanner::rewire_neighbors(std::shared_ptr<RRTNode> random_node) {
     ROS_INFO("In rewire now");
     // if this step is for random_node, then Nr of v is empty, fo cull_neighbor will not cull any nodes
+    if (random_node->get_g_cost() - random_node->get_lmc() <= this->epsilon_) {
+        return;
+    }
     this->cull_neighbors(random_node);
     std::vector<std::shared_ptr<RRTNode>> n_in;
     n_in.insert(n_in.end(), random_node->n0_in.begin(), random_node->n0_in.end());
@@ -235,6 +238,28 @@ void MotionPlanner::verify_queue(std::shared_ptr<RRTNode> node) {
 
 void MotionPlanner::reduce_inconsistency() {
     ROS_INFO("In reduce inconsistency");
+    while (!this->node_queue.empty()) {
+        std::shared_ptr<RRTNode> min = this->node_queue.top()->data;
+        this->node_queue.pop();
+        min->handle = nullptr;
+
+        if (min->get_g_cost() - min->get_lmc() > this->epsilon_) {
+            this->update_lmc(min);
+            this->rewire_neighbors(min);
+        }
+
+        min->set_g_cost(min->get_lmc());
+    }
+
+    while (!this->node_queue.empty()) {
+        this->node_queue.top()->data->handle = nullptr;
+        this->node_queue.pop();
+    }
+    this->node_queue.clear();
+}
+
+void MotionPlanner::reduce_inconsistency_for_env_update() {
+    ROS_INFO("In reduce inconsistency for env update");
     //Todo: have not add the part of keyless, Q, vbot condition check
     while (!this->node_queue.empty()) {
         std::shared_ptr<RRTNode> min = this->node_queue.top()->data;
@@ -360,7 +385,6 @@ bool MotionPlanner::find_best_parent(std::shared_ptr<RRTNode> random_node) {
             random_node->parent = neighbor;
             // update lmc(v)
             random_node->set_lmc(cost);
-            random_node->set_g_cost(cost);
             if_find_best_parent = true;
         }
     }

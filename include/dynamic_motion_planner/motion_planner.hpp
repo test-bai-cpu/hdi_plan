@@ -121,6 +121,7 @@ private:
     void cull_neighbors(std::shared_ptr<RRTNode> random_node);
     void verify_queue(std::shared_ptr<RRTNode> node);
     void reduce_inconsistency();
+    void reduce_inconsistency_for_env_update();
     void update_lmc(std::shared_ptr<RRTNode> node);
 
     // find the solution path
