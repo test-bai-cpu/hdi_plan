@@ -20,6 +20,7 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh, const ros::NodeHandle &p
 
     // initialization subscribers
     this->sub_quadrotor_state_ = nh_.subscribe("hdi_plan/quadrotor_state", 1, &MotionPlanner::quadrotor_state_callback, this);
+    this->sub_obstacle_info_ = nh_.subscribe("hdi_plan/obstacle_info_topic", 1, &MotionPlanner::obstacle_info_callback, this);
     this->pub_solution_path_ = nh_.advertise<geometry_msgs::PoseStamped>("command/pose", 1);
 }
 
@@ -98,6 +99,22 @@ void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr 
     }
 }
 
+void MotionPlanner::obstacle_info_callback(const hdi_plan::obstacle_info::ConstPtr &msg) {
+	std::string obstacle_name = msg->name;
+	Obstacle_type obstacle_type = msg->type;
+	bool obstacle_operation = msg->operation;
+	Eigen::Vector3d obstacle_position(msg->position.x, msg->position.y, msg->position.z);
+	auto obstacle = std::make_shared<Obstacle>(obstacle_name, obstacle_type, obstacle_operation, obstacle_position);
+
+	this->obstacle_update_info_list.push_back(obstacle);
+
+	if (obstacle_operation) {
+		this->obstacle_map[obstacle_name] = obstacle;
+	} else {
+		this->obstacle_map.erase(obstacle_name);
+	}
+}
+
 bool MotionPlanner::solve() {
     this->count += 1;
     std::cout << "The iteration number is: " << this->count << std::endl;
@@ -106,6 +123,8 @@ bool MotionPlanner::solve() {
     }
 
     this->calculateRRG();
+
+    this->update_obstacle();
 
     // sample random state
     // need to implement how to generate random state here, by adding the info of updating obstacles
@@ -132,6 +151,51 @@ bool MotionPlanner::solve() {
         this->publish_solution_path();
     }
     return true;
+}
+
+void MotionPlanner::update_obstacle() {
+	bool add_obstacle = false;
+	bool remove_obstacle = false;
+
+	for (auto it = this->obstacle_update_info_list.begin(); it != this->obstacle_update_info_list.end(); ++it) {
+		std::shared_ptr<Obstacle> obstacle = *it;
+		if (!obstacle->get_operation()) {
+			this->remove_obstacle(obstacle);
+			remove_obstacle = true;
+		}
+	}
+	if (remove_obstacle) {
+		this->reduce_inconsistency_for_env_update();
+	}
+
+
+	for (auto it = this->obstacle_update_info_list.begin(); it != this->obstacle_update_info_list.end(); ++it) {
+		std::shared_ptr<Obstacle> obstacle = *it;
+		if (obstacle->get_operation()) {
+			this->add_obstacle(obstacle);
+			add_obstacle = true;
+		}
+	}
+	if (add_obstacle) {
+		this->propogate_descendants();
+		this->verify_queue(v_bot);
+		this->reduce_inconsistency_for_env_update();
+	}
+
+
+	this->obstacle_update_info_list.clear();
+}
+
+void MotionPlanner::remove_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
+
+}
+
+void MotionPlanner::add_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
+
+}
+
+void MotionPlanner::propogate_descendants() {
+
 }
 
 bool MotionPlanner::update_solution_path() {

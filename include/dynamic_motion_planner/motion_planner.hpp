@@ -9,6 +9,9 @@
 #include <limits>
 #include <cstdlib>
 #include <time.h>
+#include <string>
+#include <map>
+
 //ompl
 #include "ompl/datastructures/NearestNeighbors.h"
 #include <ompl/datastructures/BinaryHeap.h>
@@ -24,11 +27,16 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
 
+//hdi_plan
 #include "dynamic_motion_planner/node_list.hpp"
 #include "dynamic_motion_planner/edge.hpp"
 #include "dynamic_motion_planner/quadrotor.hpp"
 #include "dynamic_motion_planner/RRT_node.hpp"
 #include "dynamic_motion_planner/space.hpp"
+#include "utils/types.hpp"
+#include "generate_dynamic_scene/obstacle.hpp"
+#include <hdi_plan/obstacle_info.h>
+
 
 namespace hdi_plan {
 
@@ -83,6 +91,9 @@ private:
     ros::Subscriber sub_quadrotor_state_;
     void quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg);
 
+    ros::Subscriber sub_obstacle_info_;
+
+    void obstacle_info_callback(const hdi_plan::obstacle_info::ConstPtr &msg);
     // publisher
     ros::Publisher pub_solution_path_;
 
@@ -128,6 +139,14 @@ private:
     std::vector<Eigen::Vector3d> solution_path;
     bool update_solution_path();
     void publish_solution_path();
+
+    // obstacle related
+    void update_obstacle();
+    std::map<std::string, std::shared_ptr<Obstacle>> obstacle_map;
+	std::vector<std::shared_ptr<Obstacle>> obstacle_update_info_list;
+    void remove_obstacle(const std::shared_ptr<Obstacle>& obstacle);
+    void add_obstacle(const std::shared_ptr<Obstacle>& obstacle);
+    void propogate_descendants();
 };
 
 
