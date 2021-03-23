@@ -7,7 +7,5 @@ Obstacle::Obstacle(std::string name, Obstacle_type type, bool operation, Eigen::
 
 }
 
-Obstacle::~Obstacle() {
-}
-
+Obstacle::~Obstacle() = default;
 }

@@ -107,12 +107,6 @@ void MotionPlanner::obstacle_info_callback(const hdi_plan::obstacle_info::ConstP
 	auto obstacle = std::make_shared<Obstacle>(obstacle_name, obstacle_type, obstacle_operation, obstacle_position);
 
 	this->obstacle_update_info_list.push_back(obstacle);
-
-	if (obstacle_operation) {
-		this->obstacle_map[obstacle_name] = obstacle;
-	} else {
-		this->obstacle_map.erase(obstacle_name);
-	}
 }
 
 bool MotionPlanner::solve() {
@@ -160,6 +154,7 @@ void MotionPlanner::update_obstacle() {
 	for (auto it = this->obstacle_update_info_list.begin(); it != this->obstacle_update_info_list.end(); ++it) {
 		std::shared_ptr<Obstacle> obstacle = *it;
 		if (!obstacle->get_operation()) {
+			this->obstacle_map.erase(obstacle->get_name());
 			this->remove_obstacle(obstacle);
 			remove_obstacle = true;
 		}
@@ -168,10 +163,10 @@ void MotionPlanner::update_obstacle() {
 		this->reduce_inconsistency_for_env_update();
 	}
 
-
 	for (auto it = this->obstacle_update_info_list.begin(); it != this->obstacle_update_info_list.end(); ++it) {
 		std::shared_ptr<Obstacle> obstacle = *it;
 		if (obstacle->get_operation()) {
+			this->obstacle_map[obstacle->get_name()] = obstacle;
 			this->add_obstacle(obstacle);
 			add_obstacle = true;
 		}
@@ -182,20 +177,52 @@ void MotionPlanner::update_obstacle() {
 		this->reduce_inconsistency_for_env_update();
 	}
 
-
 	this->obstacle_update_info_list.clear();
 }
 
 void MotionPlanner::remove_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
+	std::vector<std::shared_ptr<RRTNode>> nodes_list;
+	this->nearest_neighbors_tree_->list(nodes_list);
 
+	for (auto it = nodes_list.begin(); it != nodes_list.end(); ++it) {
+		std::shared_ptr<RRTNode> node = *it;
+		if (!check_if_node_inside_obstacle(obstacle, node) || check_if_node_inside_all_obstalces(node)) {
+			continue;
+		}
+		this->update_lmc(node);
+		if (node->get_lmc() != node->get_g_cost()) {
+			this->verify_queue(node);
+		}
+	}
+}
+
+bool MotionPlanner::check_if_node_inside_obstacle(const std::shared_ptr<Obstacle>& obstacle, const std::shared_ptr<RRTNode>& node) {
+	return false;
 }
 
 void MotionPlanner::add_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
+	std::vector<std::shared_ptr<RRTNode>> nodes_list;
+	this->nearest_neighbors_tree_->list(nodes_list);
 
+	for (auto it = nodes_list.begin(); it != nodes_list.end(); ++it) {
+		std::shared_ptr<RRTNode> node = *it;
+		if (!check_if_node_inside_obstacle(obstacle, node)) {
+			continue;
+		}
+		this->verify_orphan(node);
+	}
+}
+
+void MotionPlanner::verify_orphan(std::shared_ptr<RRTNode> node) {
+	if (node->handle != nullptr) {
+		this->node_queue.remove(node->handle);
+		node->handle = nullptr;
+	}
+	this->orphan_node_list.push_back(node);
 }
 
 void MotionPlanner::propogate_descendants() {
-
+	
 }
 
 bool MotionPlanner::update_solution_path() {
@@ -345,6 +372,7 @@ void MotionPlanner::reduce_inconsistency_for_env_update() {
     this->node_queue.clear();
 }
 
+// find the best parent in N+(v)
 void MotionPlanner::update_lmc(std::shared_ptr<RRTNode> node) {
     this->cull_neighbors(node);
 
@@ -354,7 +382,16 @@ void MotionPlanner::update_lmc(std::shared_ptr<RRTNode> node) {
 
     for (auto it = n_out.begin(); it != n_out.end(); ++it) {
         std::shared_ptr<RRTNode> neighbor = *it;
-        if (neighbor->parent == node) {
+
+		bool is_orphan = false;
+		for (auto orphan = this->orphan_node_list.begin(); orphan != this->orphan_node_list.end(); ++orphan) {
+			if (*orphan == neighbor) {
+				is_orphan = true;
+				break;
+			}
+		}
+
+        if (is_orphan || neighbor->parent == node) {
             continue;
         }
         double inc_cost = this->compute_cost(node->get_state(), neighbor->get_state());  // d(v,u)

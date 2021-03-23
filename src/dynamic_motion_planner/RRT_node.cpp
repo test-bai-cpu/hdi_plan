@@ -12,7 +12,6 @@ RRTNode::RRTNode(Eigen::Vector3d state) {
     this->handle = nullptr;
 }
 
-RRTNode::~RRTNode() {
-}
+RRTNode::~RRTNode() = default;
 
 }
