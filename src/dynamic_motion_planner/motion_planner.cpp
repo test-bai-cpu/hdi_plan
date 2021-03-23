@@ -222,7 +222,7 @@ void MotionPlanner::verify_orphan(std::shared_ptr<RRTNode> node) {
 }
 
 void MotionPlanner::propogate_descendants() {
-	
+
 }
 
 bool MotionPlanner::update_solution_path() {
@@ -515,4 +515,3 @@ bool MotionPlanner::is_cost_better_than(double cost1, double cost2) {
 }
 
 }
-
