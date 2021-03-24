@@ -10,6 +10,7 @@ RRTNode::RRTNode(Eigen::Vector3d state) {
     this->lmc_ = inf;
     this->g_cost_ = inf;
     this->handle = nullptr;
+    this->parent = nullptr;
 }
 
 RRTNode::~RRTNode() = default;

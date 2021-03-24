@@ -151,6 +151,10 @@ private:
 
 	std::vector<std::shared_ptr<RRTNode>> orphan_node_list;
 	void verify_orphan(std::shared_ptr<RRTNode> node);
+	bool check_if_node_in_orphan_list(const std::shared_ptr<RRTNode>& node);
+
+	// utils
+	void make_parent_of(std::shared_ptr<RRTNode> parent_node, std::shared_ptr<RRTNode> node);
 };
 
 

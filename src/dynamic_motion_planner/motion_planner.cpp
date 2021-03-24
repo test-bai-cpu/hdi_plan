@@ -222,7 +222,52 @@ void MotionPlanner::verify_orphan(std::shared_ptr<RRTNode> node) {
 }
 
 void MotionPlanner::propogate_descendants() {
+	std::vector<std::shared_ptr<RRTNode>> orphan_node_append_list;
+	double inf = std::numeric_limits<double>::infinity();
+	for (auto it = this->orphan_node_list.begin(); it != this->orphan_node_list.end(); ++it) {
+		std::shared_ptr<RRTNode> orphan_node = *it;
+		orphan_node_append_list.insert(orphan_node_append_list.end(), orphan_node->children.begin(), orphan_node->children.end());
+	}
+	this->orphan_node_list.insert(this->orphan_node_list.end(), orphan_node_append_list.begin(), orphan_node_append_list.end());
 
+	for (auto it = this->orphan_node_list.begin(); it != this->orphan_node_list.end(); ++it) {
+		std::shared_ptr<RRTNode> orphan_node_2 = *it;
+
+		std::vector<std::shared_ptr<RRTNode>> n_out;
+		n_out.insert(n_out.end(), orphan_node_2->n0_out.begin(), orphan_node_2->n0_out.end());
+		n_out.insert(n_out.end(), orphan_node_2->nr_out.begin(), orphan_node_2->nr_out.end());
+		n_out.push_back(orphan_node_2->parent);
+
+		for (auto it = n_out.begin(); it != n_out.end(); ++it) {
+			std::shared_ptr<RRTNode> neighbor = *it;
+			if (this->check_if_node_in_orphan_list(neighbor)) {
+				continue;
+			}
+			neighbor->set_g_cost(inf);
+			this->verify_queue(neighbor);
+		}
+	}
+
+	for (auto it = this->orphan_node_list.begin(); it != this->orphan_node_list.end(); ++it) {
+		std::shared_ptr<RRTNode> orphan_node_3 = *it;
+		orphan_node_3->set_g_cost(inf);
+		orphan_node_3->set_lmc(inf);
+		if (orphan_node_3->parent != nullptr) {
+			orphan_node_3->parent->children.erase(std::remove(orphan_node_3->parent->children.begin(), orphan_node_3->parent->children.end(), orphan_node_3), orphan_node_3->parent->children.end());
+			orphan_node_3->parent = nullptr;
+		}
+	}
+
+	this->orphan_node_list.clear();
+}
+
+bool MotionPlanner::check_if_node_in_orphan_list(const std::shared_ptr<RRTNode>& node) {
+	for (auto it = this->orphan_node_list.begin(); it != this->orphan_node_list.end(); ++it) {
+		if (*it == node) {
+			return true;
+		}
+	}
+	return false;
 }
 
 bool MotionPlanner::update_solution_path() {
@@ -294,13 +339,21 @@ void MotionPlanner::rewire_neighbors(std::shared_ptr<RRTNode> random_node) {
         double new_lmc_if_choose_random_node_as_parent = random_node->get_lmc()+this->compute_cost(neighbor->get_state(), random_node->get_state());
         if (neighbor->parent != this->goal_ && this->is_cost_better_than(new_lmc_if_choose_random_node_as_parent, neighbor->get_lmc())) {
             neighbor->set_lmc(new_lmc_if_choose_random_node_as_parent);
-            neighbor->parent = random_node;
+            this->make_parent_of(random_node, neighbor);
         }
         if (neighbor->get_g_cost() - neighbor->get_lmc() > this->epsilon_) {
             ROS_INFO("In rewire: add to the priority queue");
             this->verify_queue(neighbor);
         }
     }
+}
+
+void MotionPlanner::make_parent_of(std::shared_ptr<RRTNode> parent_node, std::shared_ptr<RRTNode> node) {
+	if (node->parent != nullptr) {
+		node->parent->children.erase(std::remove(node->parent->children.begin(), node->parent->children.end(), node), node->parent->children.end());
+	}
+	node->parent = parent_node;
+	parent_node->children.push_back(node);
 }
 
 void MotionPlanner::cull_neighbors(std::shared_ptr<RRTNode> random_node) {
@@ -397,9 +450,9 @@ void MotionPlanner::update_lmc(std::shared_ptr<RRTNode> node) {
         double inc_cost = this->compute_cost(node->get_state(), neighbor->get_state());  // d(v,u)
         double cost = this->combine_cost(neighbor->get_lmc(), inc_cost); // d(v,u) + lmc(u)
         // if lmc(v) > d(v,u) + lmc(u)
-        if (node->parent != this->goal_ && this->is_cost_better_than(cost, node->get_lmc()) && this->edge_in_free_space_check(node, neighbor)) {
+        if (node->parent != this->goal_ && this->is_cost_better_than(cost, node->get_lmc())) {
             // change parent of v to u
-            node->parent = neighbor;
+			this->make_parent_of(neighbor, node);
             // update lmc(v)
             node->set_lmc(cost);
         }
