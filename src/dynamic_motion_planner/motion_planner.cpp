@@ -160,7 +160,7 @@ void MotionPlanner::update_obstacle() {
 		}
 	}
 	if (remove_obstacle) {
-		this->reduce_inconsistency_for_env_update();
+		this->reduce_inconsistency();
 	}
 
 	for (auto it = this->obstacle_update_info_list.begin(); it != this->obstacle_update_info_list.end(); ++it) {
@@ -173,8 +173,8 @@ void MotionPlanner::update_obstacle() {
 	}
 	if (add_obstacle) {
 		this->propogate_descendants();
-		this->verify_queue(v_bot);
-		this->reduce_inconsistency_for_env_update();
+		//this->verify_queue(v_bot);
+		this->reduce_inconsistency();
 	}
 
 	this->obstacle_update_info_list.clear();
@@ -184,9 +184,9 @@ void MotionPlanner::remove_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
 	std::vector<std::shared_ptr<RRTNode>> nodes_list;
 	this->nearest_neighbors_tree_->list(nodes_list);
 
-	for (auto it = nodes_list.begin(); it != nodes_list.end(); ++it) {
-		std::shared_ptr<RRTNode> node = *it;
-		if (!check_if_node_inside_obstacle(obstacle, node) || check_if_node_inside_all_obstalces(node)) {
+	// need to update this format to all for, and consider const reference
+	for (auto node : nodes_list) {
+		if (!check_if_node_inside_obstacle(obstacle, node) || check_if_node_inside_all_obstacles(node)) {
 			continue;
 		}
 		this->update_lmc(node);
@@ -197,6 +197,13 @@ void MotionPlanner::remove_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
 }
 
 bool MotionPlanner::check_if_node_inside_obstacle(const std::shared_ptr<Obstacle>& obstacle, const std::shared_ptr<RRTNode>& node) {
+	Eigen::Vector3d position = obstacle->get_position();
+	float size = obstacle->get_size();
+
+	return false;
+}
+
+bool MotionPlanner::check_if_node_inside_all_obstacles(const std::shared_ptr<RRTNode>& node) {
 	return false;
 }
 

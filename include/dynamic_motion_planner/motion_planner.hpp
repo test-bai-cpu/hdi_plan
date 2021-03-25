@@ -148,7 +148,7 @@ private:
     void add_obstacle(const std::shared_ptr<Obstacle>& obstacle);
     void propogate_descendants();
     bool check_if_node_inside_obstacle(const std::shared_ptr<Obstacle>& obstacle, const std::shared_ptr<RRTNode>& node);
-
+	bool check_if_node_inside_all_obstacles(const std::shared_ptr<RRTNode>& node);
 	std::vector<std::shared_ptr<RRTNode>> orphan_node_list;
 	void verify_orphan(std::shared_ptr<RRTNode> node);
 	bool check_if_node_in_orphan_list(const std::shared_ptr<RRTNode>& node);

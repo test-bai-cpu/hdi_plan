@@ -8,7 +8,7 @@ namespace hdi_plan {
 
 class Obstacle {
 public:
-	Obstacle(std::string name, Obstacle_type type, bool operation, Eigen::Vector3d position);
+	Obstacle(std::string name, Obstacle_type type, bool operation, float size, Eigen::Vector3d position);
 
 	~Obstacle();
 
@@ -24,6 +24,10 @@ public:
 		return this->operation_;
 	};
 
+	float get_size() const {
+		return this->size_;
+	};
+
 	Eigen::Vector3d get_position() const {
 		return this->position_;
 	};
@@ -32,6 +36,7 @@ private:
 	Obstacle_type type_;
 	bool operation_;
 	Eigen::Vector3d position_;
+	float size_;
 };
 
 
