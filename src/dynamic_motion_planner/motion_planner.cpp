@@ -101,10 +101,11 @@ void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr 
 
 void MotionPlanner::obstacle_info_callback(const hdi_plan::obstacle_info::ConstPtr &msg) {
 	std::string obstacle_name = msg->name;
-	Obstacle_type obstacle_type = msg->type;
+	Obstacle_type obstacle_type = static_cast<Obstacle_type>(msg->type);
 	bool obstacle_operation = msg->operation;
+	double obstacle_size = static_cast<double>(msg->size);
 	Eigen::Vector3d obstacle_position(msg->position.x, msg->position.y, msg->position.z);
-	auto obstacle = std::make_shared<Obstacle>(obstacle_name, obstacle_type, obstacle_operation, obstacle_position);
+	auto obstacle = std::make_shared<Obstacle>(obstacle_name, obstacle_type, obstacle_operation, obstacle_size, obstacle_position);
 
 	this->obstacle_update_info_list.push_back(obstacle);
 }
@@ -197,14 +198,28 @@ void MotionPlanner::remove_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
 }
 
 bool MotionPlanner::check_if_node_inside_obstacle(const std::shared_ptr<Obstacle>& obstacle, const std::shared_ptr<RRTNode>& node) {
-	Eigen::Vector3d position = obstacle->get_position();
-	float size = obstacle->get_size();
+	double distance = this->compute_cost(obstacle->get_position(), node->get_state());
+	if (distance < obstacle->get_size()) {
+		return true;
+	}
 
 	return false;
 }
 
 bool MotionPlanner::check_if_node_inside_all_obstacles(const std::shared_ptr<RRTNode>& node) {
-	return false;
+
+	bool result = std::any_of(this->obstacle_map.begin(), this->obstacle_map.end(), [this, node](auto obstacle){
+		return this->check_if_node_inside_obstacle(obstacle.second, node);
+	});
+	return result;
+
+	/*
+	for (auto obstacle : this->obstacle_map) {
+		if (this->check_if_node_inside_obstacle(obstacle.second, node)) {
+			return true;
+		}
+	}
+	return false;*/
 }
 
 void MotionPlanner::add_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
@@ -467,15 +482,12 @@ void MotionPlanner::update_lmc(std::shared_ptr<RRTNode> node) {
 }
 
 bool MotionPlanner::node_in_free_space_check(const std::shared_ptr<RRTNode>& random_node) {
-    return true;
+	return !this->check_if_node_inside_all_obstacles(random_node);
 }
 
 bool MotionPlanner::edge_in_free_space_check(const std::shared_ptr<RRTNode>& node1, const std::shared_ptr<RRTNode>& node2) {
-    return true;
-}
-
-bool MotionPlanner::edge_in_free_space_check_using_state(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2) {
-    return true;
+	bool result = (!this->check_if_node_inside_all_obstacles(node1)) && (!this->check_if_node_inside_all_obstacles(node2));
+    return result;
 }
 
 void MotionPlanner::calculateRRG() {

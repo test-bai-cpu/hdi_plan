@@ -110,7 +110,6 @@ private:
     void saturate(std::shared_ptr<RRTNode> random_node, const std::shared_ptr<RRTNode>& nearest_node, double distance) const;
     bool node_in_free_space_check(const std::shared_ptr<RRTNode>& random_node);
     bool edge_in_free_space_check(const std::shared_ptr<RRTNode>& node1, const std::shared_ptr<RRTNode>& node2);
-    bool edge_in_free_space_check_using_state(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2);
     bool extend(std::shared_ptr<RRTNode> random_node);
 
     // extend related

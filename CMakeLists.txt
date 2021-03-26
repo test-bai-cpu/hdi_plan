@@ -87,14 +87,15 @@ cs_add_library(generate_dynamic_scene_dependencies
 cs_add_executable(generate_dynamic_scene
         src/generate_dynamic_scene/generate_obstacle.cpp
         )
+target_link_libraries(generate_dynamic_scene_dependencies
+        ${catkin_LIBRARIES}
+        ${OpenCV_LIBRARIES}
+        stdc++fs
+        )
 target_link_libraries(generate_dynamic_scene
         generate_dynamic_scene_dependencies
         ${catkin_LIBRARIES}
         stdc++fs
-        ompl
-        Open3D
-        zmq
-        zmqpp
         )
 
 # node: motion planner
@@ -114,6 +115,7 @@ cs_add_library(dynamic_motion_planner_dependencies
         src/dynamic_motion_planner/RRT_node.cpp
         src/dynamic_motion_planner/space.cpp
         src/dynamic_motion_planner/edge.cpp
+        src/generate_dynamic_scene/obstacle.cpp
         )
 
 cs_add_executable(dynamic_motion_planner
