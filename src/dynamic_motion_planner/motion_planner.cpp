@@ -75,15 +75,27 @@ double MotionPlanner::get_nn_size() {
 
 // not the static function, need to use the space config
 std::shared_ptr<RRTNode> MotionPlanner::generate_random_node() {
-    double lower_bound = 0;
-    double upper_bound = 3;
-    double x = lower_bound + (rand()/double(RAND_MAX)*(upper_bound - lower_bound));
-    double y = lower_bound + (rand()/double(RAND_MAX)*(upper_bound - lower_bound));
-    double z = lower_bound + (rand()/double(RAND_MAX)*(upper_bound - lower_bound));
-    Eigen::Vector3d random_position(x,y,z);
-    auto random_node = std::make_shared<RRTNode>(random_position);
-    std::cout << "Generate random node position is: " << x << " " << y << " " << z << std::endl;
-    return random_node;
+	bool choose_current_state_region = (rand() % 100) < 5;
+	double x, y, z;
+
+	if (choose_current_state_region) {
+		double range = 1;
+		x = this->quadrotor_state_(0) - range + (rand()/double(RAND_MAX)*2*range);
+		y = this->quadrotor_state_(1) - range + (rand()/double(RAND_MAX)*2*range);
+		z = this->quadrotor_state_(2) - range + (rand()/double(RAND_MAX)*2*range);
+		std::cout << "Select current state region." << std::endl;
+	} else {
+		double lower_bound = 0;
+		double upper_bound = 3;
+		x = lower_bound + (rand()/double(RAND_MAX)*(upper_bound - lower_bound));
+		y = lower_bound + (rand()/double(RAND_MAX)*(upper_bound - lower_bound));
+		z = lower_bound + (rand()/double(RAND_MAX)*(upper_bound - lower_bound));
+	}
+
+	Eigen::Vector3d random_position(x,y,z);
+	auto random_node = std::make_shared<RRTNode>(random_position);
+	std::cout << "Generate random node position is: " << x << " " << y << " " << z << std::endl;
+	return random_node;
 }
 
 void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg) {
