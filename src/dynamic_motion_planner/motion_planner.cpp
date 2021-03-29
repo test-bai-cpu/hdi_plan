@@ -123,8 +123,8 @@ void MotionPlanner::obstacle_info_callback(const hdi_plan::obstacle_info::ConstP
 }
 
 bool MotionPlanner::solve() {
-    this->count += 1;
-    std::cout << "The iteration number is: " << this->count << std::endl;
+    this->iteration_count += 1;
+    std::cout << "The iteration number is: " << this->iteration_count << std::endl;
     if(!position_ready) {
         this->set_to_start_position();
     }
@@ -146,7 +146,6 @@ bool MotionPlanner::solve() {
         this->saturate(random_node, nearest_node, distance);
     }
 
-    // Todo: Question: even when no random_node added, do we need to publish the solution path? YES, because when the environment changes, the solution path will change as well.
     if (!this->extend(random_node)) {
         return false;
     }
@@ -154,9 +153,12 @@ bool MotionPlanner::solve() {
     this->rewire_neighbors(random_node);
     this->reduce_inconsistency();
 
-    if (this->update_solution_path()) {
-        this->publish_solution_path();
+    if (this->iteration_count % 20 == 1) {
+		if (this->update_solution_path()) {
+			this->publish_solution_path();
+		}
     }
+
     return true;
 }
 

@@ -52,7 +52,7 @@ public:
 private:
     // debug
     int debug{0};
-    int count{0};
+    int iteration_count{0};
 
     // ros nodes
     ros::NodeHandle nh_;
