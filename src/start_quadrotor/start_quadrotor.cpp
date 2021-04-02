@@ -20,7 +20,7 @@ StartQuadrotor::StartQuadrotor(const ros::NodeHandle &nh, const ros::NodeHandle 
 
     this->quadrotor_state_sub_ = this->nh_.subscribe("hdi_plan/quadrotor_state", 1,
                                  &StartQuadrotor::pose_callback, this);
-    this->obstacle_info_sub_ = this->nh_.subscribe("hdi_plan/obstacle_state", 1, &StartQuadrotor::obstacle_callback, this);
+    this->obstacle_info_sub_ = this->nh_.subscribe("hdi_plan/obstacle_info_topic", 1, &StartQuadrotor::obstacle_callback, this);
     this->main_loop_timer_ = this->nh_.createTimer(ros::Rate(this->main_loop_freq_),
                                       &StartQuadrotor::main_loop_callback, this);
 
@@ -42,13 +42,41 @@ void StartQuadrotor::spawn_quadrotor() {
     this->quad_ptr_->reset(this->quad_state_);
 }
 
-void StartQuadrotor::obstacle_callback(const nav_msgs::Odometry::ConstPtr &msg) {
-    std::string object_id = "obstacle";
-    std::string prefab_id = "test_cube";
-    std::shared_ptr<StaticGate> obstacle = std::make_shared<StaticGate>(object_id, prefab_id);
-    obstacle->setPosition(Eigen::Vector3f((Scalar)msg->pose.pose.position.x, (Scalar)msg->pose.pose.position.y, (Scalar)msg->pose.pose.position.z));
-    obstacle->setRotation(
-            Quaternion((Scalar)msg->pose.pose.orientation.w, (Scalar)msg->pose.pose.orientation.x, (Scalar)msg->pose.pose.orientation.y, (Scalar)msg->pose.pose.orientation.z));
+void StartQuadrotor::obstacle_callback(const hdi_plan::obstacle_info::ConstPtr &msg) {
+    std::cout << "Now render the obstacle." << std::endl;
+	std::string obstacle_id = msg->name;
+    std::cout << "obstacle_id is " << obstacle_id << std::endl;
+	Obstacle_type obstacle_type = static_cast<Obstacle_type>(msg->type);
+    std::cout << "obstacle_type is " << obstacle_type << std::endl;
+	bool obstacle_operation = msg->operation;
+    std::cout << "obstacle_operation is " << obstacle_operation << std::endl;
+	std::string prefab_id;
+	switch (obstacle_type) {
+		case Obstacle_type::cube: {
+            std::cout << "test_cube" << std::endl;
+			prefab_id = "test_cube";
+			break;
+		}
+		case Obstacle_type::sphere: {
+            std::cout << "Sphere" << std::endl;
+			prefab_id = "Sphere";
+			break;
+		}
+		default: {
+            std::cout << "Default: test_cube" << std::endl;
+			prefab_id = "test_cube";
+			break;
+		}
+	}
+
+    std::shared_ptr<StaticObstacle> obstacle = std::make_shared<StaticObstacle>(obstacle_id, prefab_id);
+	if (obstacle_operation) {
+        std::cout << "Add the obstacle" << std::endl;
+		obstacle->setPosition(Eigen::Vector3f((Scalar)msg->position.x, (Scalar)msg->position.y, (Scalar)msg->position.z));
+	} else {
+        std::cout << "Remove the obstacle" << std::endl;
+		obstacle->setPosition(Eigen::Vector3f(100, 100, 100));
+	}
     this->unity_bridge_ptr_->addStaticObject(obstacle);
 
     if (this->unity_render_ && this->unity_ready_) {

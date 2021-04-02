@@ -9,7 +9,4 @@
 
     <node name="start_quadrotor_node" pkg="hdi_plan" type="start_quadrotor_node" output="screen" >
     </node>
-
-    <node name="test1" pkg="hdi_plan" type="test1" output="screen" >
-    </node>
 </launch>

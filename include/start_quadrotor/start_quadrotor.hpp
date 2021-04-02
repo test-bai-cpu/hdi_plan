@@ -18,9 +18,13 @@
 #include "flightlib/common/quad_state.hpp"
 #include "flightlib/common/types.hpp"
 #include "flightlib/objects/quadrotor.hpp"
-#include "flightlib/objects/static_gate.hpp"
+#include "flightlib/objects/static_obstacle.hpp"
 #include "flightlib/sensors/rgb_camera.hpp"
 #include "flightlib/bridges/unity_message_types.hpp"
+
+// obstacle
+#include <hdi_plan/obstacle_info.h>
+#include "utils/types.hpp"
 
 using namespace flightlib;
 
@@ -62,7 +66,7 @@ private:
     // callbacks
     void main_loop_callback(const ros::TimerEvent& event);
     void pose_callback(const nav_msgs::Odometry::ConstPtr& msg);
-    void obstacle_callback(const nav_msgs::Odometry::ConstPtr& msg);
+    void obstacle_callback(const hdi_plan::obstacle_info::ConstPtr &msg);
 
     void set_unity();
     void connect_unity();

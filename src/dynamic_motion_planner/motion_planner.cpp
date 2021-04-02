@@ -31,10 +31,10 @@ double MotionPlanner::distance_function(const std::shared_ptr<RRTNode>& a, const
 }
 
 void MotionPlanner::setup() {
-    Eigen::Vector3d start_position(0,0,0);
+    Eigen::Vector3d start_position(0,5,5);
     this->start_ = std::make_shared<RRTNode>(start_position);
     //this->quadrotor_ = std::make_shared<RRTNode>(start_position);
-    Eigen::Vector3d goal_position(2.5,2.5,2.5);
+    Eigen::Vector3d goal_position(7,5,5);
     this->goal_ = std::make_shared<RRTNode>(goal_position);
     this->goal_->set_lmc(0);
     this->goal_->set_g_cost(0);
@@ -86,7 +86,7 @@ std::shared_ptr<RRTNode> MotionPlanner::generate_random_node() {
 		std::cout << "Select current state region." << std::endl;
 	} else {
 		double lower_bound = 0;
-		double upper_bound = 3;
+		double upper_bound = 20;
 		x = lower_bound + (rand()/double(RAND_MAX)*(upper_bound - lower_bound));
 		y = lower_bound + (rand()/double(RAND_MAX)*(upper_bound - lower_bound));
 		z = lower_bound + (rand()/double(RAND_MAX)*(upper_bound - lower_bound));
@@ -99,7 +99,7 @@ std::shared_ptr<RRTNode> MotionPlanner::generate_random_node() {
 }
 
 void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg) {
-    //ros::Duration(0.5).sleep();
+    ros::Duration(0.1).sleep();
     Eigen::Vector3d quadrotor_state(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
     this->quadrotor_state_ = quadrotor_state;
     this->quadrotor_ = std::make_shared<RRTNode>(quadrotor_state);
@@ -112,6 +112,7 @@ void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr 
 }
 
 void MotionPlanner::obstacle_info_callback(const hdi_plan::obstacle_info::ConstPtr &msg) {
+    std::cout << "Motion Planner node: callback" << std::endl;
 	std::string obstacle_name = msg->name;
 	Obstacle_type obstacle_type = static_cast<Obstacle_type>(msg->type);
 	bool obstacle_operation = msg->operation;
@@ -163,12 +164,15 @@ bool MotionPlanner::solve() {
 }
 
 void MotionPlanner::update_obstacle() {
+	ROS_INFO("Update obstacle now");
 	bool add_obstacle = false;
 	bool remove_obstacle = false;
 
 	for (auto it = this->obstacle_update_info_list.begin(); it != this->obstacle_update_info_list.end(); ++it) {
 		std::shared_ptr<Obstacle> obstacle = *it;
+		std::cout << "Obstacle info is: " << obstacle->get_position() << obstacle->get_size() << obstacle->get_name() << obstacle->get_type() << std::endl;
 		if (!obstacle->get_operation()) {
+			std::cout << "Remove this ob: " << obstacle->get_position() << obstacle->get_size() << obstacle->get_name() << obstacle->get_type() << std::endl;
 			this->obstacle_map.erase(obstacle->get_name());
 			this->remove_obstacle(obstacle);
 			remove_obstacle = true;
@@ -180,7 +184,9 @@ void MotionPlanner::update_obstacle() {
 
 	for (auto it = this->obstacle_update_info_list.begin(); it != this->obstacle_update_info_list.end(); ++it) {
 		std::shared_ptr<Obstacle> obstacle = *it;
+		std::cout << "Obstacle info is: " << obstacle->get_position() << obstacle->get_size() << obstacle->get_name() << obstacle->get_type() << std::endl;
 		if (obstacle->get_operation()) {
+			std::cout << "Add this ob: " << obstacle->get_position() << obstacle->get_size() << obstacle->get_name() << obstacle->get_type() << std::endl;
 			this->obstacle_map[obstacle->get_name()] = obstacle;
 			this->add_obstacle(obstacle);
 			add_obstacle = true;
@@ -196,6 +202,7 @@ void MotionPlanner::update_obstacle() {
 }
 
 void MotionPlanner::remove_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
+	ROS_INFO("Start to removing the ob");
 	std::vector<std::shared_ptr<RRTNode>> nodes_list;
 	this->nearest_neighbors_tree_->list(nodes_list);
 
@@ -214,9 +221,10 @@ void MotionPlanner::remove_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
 bool MotionPlanner::check_if_node_inside_obstacle(const std::shared_ptr<Obstacle>& obstacle, const std::shared_ptr<RRTNode>& node) {
 	double distance = this->compute_cost(obstacle->get_position(), node->get_state());
 	if (distance < obstacle->get_size()) {
+        ROS_INFO("The node is inside obstacle");
 		return true;
 	}
-
+    ROS_INFO("The node is not inside obstacle");
 	return false;
 }
 
@@ -501,6 +509,7 @@ bool MotionPlanner::node_in_free_space_check(const std::shared_ptr<RRTNode>& ran
 
 bool MotionPlanner::edge_in_free_space_check(const std::shared_ptr<RRTNode>& node1, const std::shared_ptr<RRTNode>& node2) {
 	bool result = (!this->check_if_node_inside_all_obstacles(node1)) && (!this->check_if_node_inside_all_obstacles(node2));
+    std::cout << "Edge in free space check result is " << result << std::endl;
     return result;
 }
 
@@ -530,12 +539,13 @@ void MotionPlanner::saturate(std::shared_ptr<RRTNode> random_node, const std::sh
 bool MotionPlanner::extend(std::shared_ptr<RRTNode> random_node) {
     ROS_INFO("In extend now");
     if (!this->node_in_free_space_check(random_node)) {
+        ROS_INFO("Exit extend because 1st node space check");
         return false;
     }
     // v is random_node, u is neighbor
     // 1. find all nodes within shrinking hyperball in the nearest tree, and their distance
     this->update_neighbors_list(random_node);
-    if (! this->find_best_parent(random_node)) {
+    if (!this->find_best_parent(random_node)) {
         ROS_INFO("### Cannot find best parent for this random node.");
         return false;
     }
@@ -559,6 +569,7 @@ bool MotionPlanner::extend(std::shared_ptr<RRTNode> random_node) {
 }
 
 bool MotionPlanner::find_best_parent(std::shared_ptr<RRTNode> random_node) {
+    std::cout << "Now is in find best parent." << std::endl;
     bool if_find_best_parent = false;
     for (auto it = random_node->nbh.begin(); it != random_node->nbh.end(); ++it) {
         std::shared_ptr<RRTNode> neighbor = it->first;
@@ -566,6 +577,8 @@ bool MotionPlanner::find_best_parent(std::shared_ptr<RRTNode> random_node) {
         double inc_cost = this->compute_cost(random_node->get_state(), neighbor->get_state());  // d(v,u)
         double cost = this->combine_cost(neighbor->get_lmc(), inc_cost); // d(v,u) + lmc(u)
         // if lmc(v) > d(v,u) + lmc(u)
+        std::cout << "Now check why always not find the best parent" << std::endl;
+        std::cout << "cost is " << cost << " . get_lmc is " << random_node->get_lmc() << " cost < lmc" << std::endl;
         if (this->is_cost_better_than(cost, random_node->get_lmc()) && this->edge_in_free_space_check(random_node, neighbor)) {
             it->second = true;
             // change parent of v to u
@@ -580,7 +593,7 @@ bool MotionPlanner::find_best_parent(std::shared_ptr<RRTNode> random_node) {
 
 void MotionPlanner::update_neighbors_list(std::shared_ptr<RRTNode> random_node) {
     std::vector<std::shared_ptr<RRTNode>> nbh;
-    this->nearest_neighbors_tree_->nearestR(random_node, this->rrg_r_, nbh);
+    this->nearest_neighbors_tree_->nearestR(random_node, this->rrg_r_ + 1, nbh);
 
     random_node->nbh.resize(nbh.size());
     // the default bool value of all added nodes are false, the bool value is the feasibility of edge as been tested

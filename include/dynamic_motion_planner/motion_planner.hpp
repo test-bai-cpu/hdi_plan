@@ -102,9 +102,9 @@ private:
 
     // for calculate the shrinking ball radius
     void calculateRRG();
-    double max_distance_{0.5}; // the maximum length of a motion to be added to a tree
+    double max_distance_{1}; // the maximum length of a motion to be added to a tree
     double r_rrt_{1}; // a constant for r-disc rewiring calculations
-    double rrg_r_{0.5}; // current value of the radius used for the neighbors
+    double rrg_r_{1.5}; // current value of the radius used for the neighbors
 
     // functions in the main loop
     void saturate(std::shared_ptr<RRTNode> random_node, const std::shared_ptr<RRTNode>& nearest_node, double distance) const;
