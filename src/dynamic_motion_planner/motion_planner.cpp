@@ -17,6 +17,7 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh, const ros::NodeHandle &p
     // initialization
     ROS_INFO("Initialization");
     this->nearest_neighbors_tree_->add(this->goal_);
+	//this->initiate_obstacles();
 
     // initialization subscribers
     this->sub_quadrotor_state_ = nh_.subscribe("hdi_plan/quadrotor_state", 1, &MotionPlanner::quadrotor_state_callback, this);
@@ -26,15 +27,39 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh, const ros::NodeHandle &p
 
 MotionPlanner::~MotionPlanner() = default;
 
+void MotionPlanner::initiate_obstacles() {
+	std::cout << "Initiate obstacles, add static obstacles." << std::endl;
+
+	// oil tank
+	Eigen::Vector3d obstacle_position(-9, 27, 5);
+	auto obstacle = std::make_shared<Obstacle>("oil_tank", Obstacle_type::tank_1, true, 7.0, obstacle_position);
+	std::cout << "Add this static obstacle: " << obstacle->get_position() << obstacle->get_size() << obstacle->get_name() << obstacle->get_type() << std::endl;
+	this->obstacle_map[obstacle->get_name()] = obstacle;
+
+	// red house
+	Eigen::Vector3d obstacle_position2(11, 17, 5);
+	auto obstacle2 = std::make_shared<Obstacle>("red_house", Obstacle_type::sphere, true, 7.0, obstacle_position2);
+	std::cout << "Add this static obstacle: " << obstacle2->get_position() << obstacle2->get_size() << obstacle2->get_name() << obstacle2->get_type() << std::endl;
+	this->obstacle_map[obstacle2->get_name()] = obstacle2;
+
+	// blue cube
+	Eigen::Vector3d obstacle_position3(17, 39, 5);
+	auto obstacle3 = std::make_shared<Obstacle>("blue_cube", Obstacle_type::cube, true, 5.0, obstacle_position2);
+	std::cout << "Add this static obstacle: " << obstacle3->get_position() << obstacle3->get_size() << obstacle3->get_name() << obstacle3->get_type() << std::endl;
+	this->obstacle_map[obstacle3->get_name()] = obstacle3;
+}
+
 double MotionPlanner::distance_function(const std::shared_ptr<RRTNode>& a, const std::shared_ptr<RRTNode>& b) {
     return this->compute_cost(a->get_state(), b->get_state());
 }
 
 void MotionPlanner::setup() {
-    Eigen::Vector3d start_position(0,5,5);
+    //Eigen::Vector3d start_position(0,0,5);
+    Eigen::Vector3d start_position(0,0,3);
     this->start_ = std::make_shared<RRTNode>(start_position);
     //this->quadrotor_ = std::make_shared<RRTNode>(start_position);
-    Eigen::Vector3d goal_position(7,5,5);
+    //Eigen::Vector3d goal_position(20,20,5);
+    Eigen::Vector3d goal_position(0,10,3);
     this->goal_ = std::make_shared<RRTNode>(goal_position);
     this->goal_->set_lmc(0);
     this->goal_->set_g_cost(0);
@@ -86,9 +111,13 @@ std::shared_ptr<RRTNode> MotionPlanner::generate_random_node() {
 		std::cout << "Select current state region." << std::endl;
 	} else {
 		double lower_bound = 0;
-		double upper_bound = 20;
+		//double upper_bound = 30;
+        double upper_bound = 20;
 		x = lower_bound + (rand()/double(RAND_MAX)*(upper_bound - lower_bound));
 		y = lower_bound + (rand()/double(RAND_MAX)*(upper_bound - lower_bound));
+
+        //upper_bound = 20;
+        upper_bound = 10;
 		z = lower_bound + (rand()/double(RAND_MAX)*(upper_bound - lower_bound));
 	}
 
@@ -99,7 +128,7 @@ std::shared_ptr<RRTNode> MotionPlanner::generate_random_node() {
 }
 
 void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg) {
-    ros::Duration(0.1).sleep();
+    //ros::Duration(0.1).sleep();
     Eigen::Vector3d quadrotor_state(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
     this->quadrotor_state_ = quadrotor_state;
     this->quadrotor_ = std::make_shared<RRTNode>(quadrotor_state);
@@ -127,6 +156,7 @@ bool MotionPlanner::solve() {
     this->iteration_count += 1;
     std::cout << "The iteration number is: " << this->iteration_count << std::endl;
     if(!position_ready) {
+        ROS_INFO("Set to start position");
         this->set_to_start_position();
     }
 
@@ -154,7 +184,7 @@ bool MotionPlanner::solve() {
     this->rewire_neighbors(random_node);
     this->reduce_inconsistency();
 
-    if (this->iteration_count % 20 == 1) {
+    if (this->iteration_count % 50 == 1) {
 		if (this->update_solution_path()) {
 			this->publish_solution_path();
 		}
@@ -224,7 +254,6 @@ bool MotionPlanner::check_if_node_inside_obstacle(const std::shared_ptr<Obstacle
         ROS_INFO("The node is inside obstacle");
 		return true;
 	}
-    ROS_INFO("The node is not inside obstacle");
 	return false;
 }
 
@@ -325,9 +354,9 @@ bool MotionPlanner::update_solution_path() {
     if (cost_to_nearest_node > this->max_distance_) {
         return if_find_solution; // return false, fail to find solution
     }
-    if (!this->edge_in_free_space_check(this->quadrotor_, nearest_node_of_quadrotor)) {
-        return if_find_solution; // return false, fail to find solution
-    }
+    //if (!this->edge_in_free_space_check(this->quadrotor_, nearest_node_of_quadrotor)) {
+    //    return if_find_solution; // return false, fail to find solution
+    //}
 
     this->solution_path.clear();
     std::shared_ptr<RRTNode> intermediate_node = nearest_node_of_quadrotor;
@@ -504,7 +533,9 @@ void MotionPlanner::update_lmc(std::shared_ptr<RRTNode> node) {
 }
 
 bool MotionPlanner::node_in_free_space_check(const std::shared_ptr<RRTNode>& random_node) {
-	return !this->check_if_node_inside_all_obstacles(random_node);
+	bool result = !this->check_if_node_inside_all_obstacles(random_node);
+	std::cout << "Node in free space check result is " << result << std::endl;
+	return result;
 }
 
 bool MotionPlanner::edge_in_free_space_check(const std::shared_ptr<RRTNode>& node1, const std::shared_ptr<RRTNode>& node2) {

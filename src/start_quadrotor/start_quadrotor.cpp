@@ -5,7 +5,7 @@ namespace hdi_plan {
 StartQuadrotor::StartQuadrotor(const ros::NodeHandle &nh, const ros::NodeHandle &pnh)
 :   nh_(nh),
     pnh_(pnh),
-    scene_id_(UnityScene::WAREHOUSE),
+    scene_id_(UnityScene::INDUSTRIAL),
     unity_ready_(false),
     unity_render_(false),
     main_loop_freq_(50.0) {
@@ -40,6 +40,8 @@ void StartQuadrotor::spawn_quadrotor() {
     this->quad_ptr_ = std::make_shared<Quadrotor>();
     this->quad_state_.setZero();
     this->quad_ptr_->reset(this->quad_state_);
+    Vector<3> quad_size(0.5, 0.5, 0.5);
+    quad_ptr_->setSize(quad_size);
 }
 
 void StartQuadrotor::obstacle_callback(const hdi_plan::obstacle_info::ConstPtr &msg) {
@@ -53,8 +55,13 @@ void StartQuadrotor::obstacle_callback(const hdi_plan::obstacle_info::ConstPtr &
 	std::string prefab_id;
 	switch (obstacle_type) {
 		case Obstacle_type::cube: {
-            std::cout << "test_cube" << std::endl;
-			prefab_id = "test_cube";
+            std::cout << "cube_5" << std::endl;
+			prefab_id = "cube_5";
+			break;
+		}
+        case Obstacle_type::tank_1: {
+            std::cout << "tank_1" << std::endl;
+			prefab_id = "tank_1";
 			break;
 		}
 		case Obstacle_type::sphere: {
@@ -107,7 +114,7 @@ void StartQuadrotor::set_unity() {
         this->unity_bridge_ptr_ = UnityBridge::getInstance();
         this->unity_bridge_ptr_->addQuadrotor(this->quad_ptr_);
         this->unity_render_ = true;
-    ROS_INFO("[%s] Unity Bridge is created.", this->pnh_.getNamespace().c_str());
+        ROS_INFO("[%s] Unity Bridge is created.", this->pnh_.getNamespace().c_str());
     }
 }
 

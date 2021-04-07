@@ -140,6 +140,7 @@ private:
     void publish_solution_path();
 
     // obstacle related
+    void initiate_obstacles();
     void update_obstacle();
     std::map<std::string, std::shared_ptr<Obstacle>> obstacle_map;
 	std::vector<std::shared_ptr<Obstacle>> obstacle_update_info_list;
