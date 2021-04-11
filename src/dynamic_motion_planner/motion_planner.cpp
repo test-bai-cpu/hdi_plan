@@ -21,8 +21,10 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh, const ros::NodeHandle &p
 
     // initialization subscribers
     this->sub_quadrotor_state_ = nh_.subscribe("hdi_plan/quadrotor_state", 1, &MotionPlanner::quadrotor_state_callback, this);
+	//this->sub_goal_point_ = nh_.subscribe("hdi_plan/goal_point", 1, &MotionPlanner::goal_point_callback, this);
     this->sub_obstacle_info_ = nh_.subscribe("hdi_plan/obstacle_info_topic", 1, &MotionPlanner::obstacle_info_callback, this);
     this->pub_solution_path_ = nh_.advertise<geometry_msgs::PoseStamped>("command/pose", 1);
+    this->sub_human_movement_ = nh_.subscribe("hdi_plan/human_movement", 1, &MotionPlanner::human_movement_callback, this);
 }
 
 MotionPlanner::~MotionPlanner() = default;
@@ -32,13 +34,13 @@ void MotionPlanner::initiate_obstacles() {
 
 	// oil tank
 	Eigen::Vector3d obstacle_position(-9, 27, 5);
-	auto obstacle = std::make_shared<Obstacle>("oil_tank", Obstacle_type::tank_1, true, 7.0, obstacle_position);
+	auto obstacle = std::make_shared<Obstacle>("oil_tank", Obstacle_type::tank_1, true, 15.0, obstacle_position);
 	std::cout << "Add this static obstacle: " << obstacle->get_position() << obstacle->get_size() << obstacle->get_name() << obstacle->get_type() << std::endl;
 	this->obstacle_map[obstacle->get_name()] = obstacle;
 
 	// red house
 	Eigen::Vector3d obstacle_position2(11, 17, 5);
-	auto obstacle2 = std::make_shared<Obstacle>("red_house", Obstacle_type::sphere, true, 7.0, obstacle_position2);
+	auto obstacle2 = std::make_shared<Obstacle>("red_house", Obstacle_type::sphere, true, 15.0, obstacle_position2);
 	std::cout << "Add this static obstacle: " << obstacle2->get_position() << obstacle2->get_size() << obstacle2->get_name() << obstacle2->get_type() << std::endl;
 	this->obstacle_map[obstacle2->get_name()] = obstacle2;
 
@@ -133,7 +135,7 @@ void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr 
     this->quadrotor_state_ = quadrotor_state;
     this->quadrotor_ = std::make_shared<RRTNode>(quadrotor_state);
     if (this->compute_cost(quadrotor_state, this->goal_->get_state()) > 0.1) {
-        this->solve();
+        //this->solve();
     } else {
         ROS_INFO("Already reach the goal. Will exit.");
         this->sub_quadrotor_state_.shutdown();
@@ -150,6 +152,19 @@ void MotionPlanner::obstacle_info_callback(const hdi_plan::obstacle_info::ConstP
 	auto obstacle = std::make_shared<Obstacle>(obstacle_name, obstacle_type, obstacle_operation, obstacle_size, obstacle_position);
 
 	this->obstacle_update_info_list.push_back(obstacle);
+}
+
+void MotionPlanner::goal_point_callback(const geometry_msgs::Point::ConstPtr &msg) {
+	Eigen::Vector3d goal_point(msg->x, msg->y, msg->z);
+}
+
+void MotionPlanner::human_movement_callback(const geometry_msgs::Point::ConstPtr &msg) {
+	Eigen::Vector2d human_position(msg->x, msg->y);
+	if (add_obstacle) {
+		this->propogate_descendants();
+		//this->verify_queue(v_bot);
+		this->reduce_inconsistency();
+	}
 }
 
 bool MotionPlanner::solve() {
@@ -250,7 +265,8 @@ void MotionPlanner::remove_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
 
 bool MotionPlanner::check_if_node_inside_obstacle(const std::shared_ptr<Obstacle>& obstacle, const std::shared_ptr<RRTNode>& node) {
 	double distance = this->compute_cost(obstacle->get_position(), node->get_state());
-	if (distance < obstacle->get_size()) {
+	double keep_distance = obstacle->get_size()/2 + 1;
+	if (distance < keep_distance) {
         ROS_INFO("The node is inside obstacle");
 		return true;
 	}

@@ -1,9 +1,71 @@
-<?xml version="1.0"?>
 <launch>
-    <arg name="debug" default="0" />
-    <param name="use_sim_time" value="false"/>
+  <arg name="enable_command_feedthrough" default="false"/>
+  <arg name="world_name" default="basic"/>
+  <arg name="enable_logging" default="false"/>
+  <arg name="enable_ground_truth" default="true"/>
+  <arg name="paused" value="false"/>
+  <arg name="use_unity_editor" default="false" />
+  <arg name="x_init" default="0"/>
+  <arg name="y_init" default="0"/>
+  <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find rotors_gazebo)/models"/>
+  <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models"/>
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find rotors_gazebo)/worlds/$(arg world_name).world"/>
+    <!-- <arg name="debug" value="true"/> -->
+    <arg name="paused" value="$(arg paused)"/>
+    <!-- <arg name="gui" value="false"/> -->
+  </include>
+
+  <group ns="hummingbird">
+
+    <include file="$(find rotors_gazebo)/launch/spawn_mav.launch">
+      <arg name="mav_name" value="hummingbird" />
+      <arg name="model" value="$(find rotors_description)/urdf/mav_generic_odometry_sensor.gazebo" />
+      <arg name="enable_logging" value="$(arg enable_logging)" />
+      <arg name="enable_ground_truth" value="$(arg enable_ground_truth)" />
+      <arg name="log_file" value="hummingbird"/>
+      <arg name="x" value="0.0" />
+      <arg name="y" value="0.0"/>
+    </include>
+
+    <!-- RPG RotorS interface. -->
+    <node pkg="rpg_rotors_interface" type="rpg_rotors_interface"
+        name="rpg_rotors_interface" output="screen" >
+      <rosparam file="$(find rpg_rotors_interface)/parameters/rpg_rotors_interface.yaml" />
+      <!-- .. -->
+      <remap from="odometry" to="ground_truth/odometry" />
+      <remap from="rpg_rotors_interface/arm" to="bridge/arm" />
+    </node>
+
+    <!-- Autopilot -->
+    <node pkg="autopilot" type="autopilot" name="autopilot" output="screen">
+      <rosparam file="$(find state_predictor)/parameters/hummingbird.yaml" />
+      <rosparam file="$(find rpg_rotors_interface)/parameters/position_controller.yaml" />
+      <rosparam file="$(find rpg_rotors_interface)/parameters/autopilot.yaml" />
+
+      <param name="position_controller/use_rate_mode" value="True" />
+
+      <param name="velocity_estimate_in_world_frame" value="false" />
+      <param name="state_estimate_timeout" value="0.1" />
+      <param name="control_command_delay" value="0.05" />
+      <param name="enable_command_feedthrough" value="$(arg enable_command_feedthrough)" />
+
+      <remap from="autopilot/state_estimate" to="ground_truth/odometry" />
+    </node>
+
+    <!-- RPG Flightmare Unity Render. -->
+    <node name="rpg_flightmare_render" pkg="flightrender" type="RPG_Flightmare.x86_64" unless="$(arg use_unity_editor)">
+    </node>
+
+    <node name="start_quadrotor_node" pkg="hdi_plan" type="start_quadrotor_node" output="screen">
+      <rosparam file="$(find hdi_plan)/params/start_quadrotor.yaml" />
+      <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
+    </node>
 
     <node name="dynamic_motion_planner" pkg="hdi_plan" type="dynamic_motion_planner" output="screen" >
+      <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
     </node>
+
+  </group>
 
 </launch>

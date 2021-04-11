@@ -26,6 +26,7 @@
 #include <ros/ros.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Point.h>
 
 //hdi_plan
 #include "dynamic_motion_planner/node_list.hpp"
@@ -92,8 +93,14 @@ private:
     void quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg);
 
     ros::Subscriber sub_obstacle_info_;
-
     void obstacle_info_callback(const hdi_plan::obstacle_info::ConstPtr &msg);
+
+	ros::Subscriber sub_goal_point_;
+	void goal_point_callback(const geometry_msgs::Point::ConstPtr &msg);
+
+	ros::Subscriber sub_human_movement_;
+	void human_movement_callback(const geometry_msgs::Point::ConstPtr &msg);
+
     // publisher
     ros::Publisher pub_solution_path_;
 

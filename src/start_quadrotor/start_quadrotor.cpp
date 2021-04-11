@@ -52,21 +52,29 @@ void StartQuadrotor::obstacle_callback(const hdi_plan::obstacle_info::ConstPtr &
     std::cout << "obstacle_type is " << obstacle_type << std::endl;
 	bool obstacle_operation = msg->operation;
     std::cout << "obstacle_operation is " << obstacle_operation << std::endl;
+	double obstacle_size = static_cast<double>(msg->size);
+	std::cout << "obstacle_size is " << obstacle_size << std::endl;
+
 	std::string prefab_id;
 	switch (obstacle_type) {
 		case Obstacle_type::cube: {
-            std::cout << "cube_5" << std::endl;
-			prefab_id = "cube_5";
-			break;
-		}
-        case Obstacle_type::tank_1: {
-            std::cout << "tank_1" << std::endl;
-			prefab_id = "tank_1";
+            std::cout << "test_cube" << std::endl;
+			prefab_id = "test_cube";
 			break;
 		}
 		case Obstacle_type::sphere: {
             std::cout << "Sphere" << std::endl;
 			prefab_id = "Sphere";
+			break;
+		}
+		case Obstacle_type::tank_1: {
+			std::cout << "tank_1" << std::endl;
+			prefab_id = "tank_1";
+			break;
+		}
+		case Obstacle_type::human: {
+			std::cout << "human" << std::endl;
+			prefab_id = "human";
 			break;
 		}
 		default: {
@@ -84,6 +92,10 @@ void StartQuadrotor::obstacle_callback(const hdi_plan::obstacle_info::ConstPtr &
         std::cout << "Remove the obstacle" << std::endl;
 		obstacle->setPosition(Eigen::Vector3f(100, 100, 100));
 	}
+
+	Vector<3> obstacle_size_local_scale(obstacle_size, obstacle_size, obstacle_size);
+	obstacle->setSize(obstacle_size_local_scale);
+
     this->unity_bridge_ptr_->addStaticObject(obstacle);
 
     if (this->unity_render_ && this->unity_ready_) {

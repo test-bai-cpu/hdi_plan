@@ -4,10 +4,10 @@
 
 namespace hdi_plan {
 enum Obstacle_type {
-	sphere = 0,
-	cube = 1,
+	cube = 0,
+	sphere = 1,
 	tank_1 = 2,
-	test_cube = 3
+	human = 3
 };
 
 
