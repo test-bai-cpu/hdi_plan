@@ -11,6 +11,8 @@
 #include <time.h>
 #include <string>
 #include <map>
+#include <queue>
+#include <algorithm>
 
 //ompl
 #include "ompl/datastructures/NearestNeighbors.h"
@@ -125,6 +127,7 @@ private:
 
     // cost related members
     double compute_cost(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2);
+	double compute_cost_with_weight(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2, double weight=1);
     double combine_cost(double cost1, double cost2);
     bool is_cost_better_than(double cost1, double cost2);
 
@@ -139,7 +142,7 @@ private:
     void verify_queue(std::shared_ptr<RRTNode> node);
     void reduce_inconsistency();
     void reduce_inconsistency_for_env_update();
-    void update_lmc(std::shared_ptr<RRTNode> node);
+    void update_lmc(std::shared_ptr<RRTNode> node, bool consider_human=false);
 
     // find the solution path
     std::vector<Eigen::Vector3d> solution_path;
@@ -155,13 +158,25 @@ private:
     void add_obstacle(const std::shared_ptr<Obstacle>& obstacle);
     void propogate_descendants();
     bool check_if_node_inside_obstacle(const std::shared_ptr<Obstacle>& obstacle, const std::shared_ptr<RRTNode>& node);
-	bool check_if_node_inside_all_obstacles(const std::shared_ptr<RRTNode>& node);
+	bool check_if_node_inside_all_obstacles(const std::shared_ptr<RRTNode>& node, bool consider_human);
 	std::vector<std::shared_ptr<RRTNode>> orphan_node_list;
 	void verify_orphan(std::shared_ptr<RRTNode> node);
 	bool check_if_node_in_orphan_list(const std::shared_ptr<RRTNode>& node);
 
 	// utils
 	void make_parent_of(std::shared_ptr<RRTNode> parent_node, std::shared_ptr<RRTNode> node);
+
+	// human part
+	bool exist_human_{false};
+	Eigen::Vector2d human_position_;
+	bool add_human_{false};
+	void add_human_as_obstacle();
+	double human_height_{2};
+	bool check_if_node_inside_human(const std::shared_ptr<RRTNode>& node);
+	double check_if_state_near_human(const Eigen::Vector3d& state1);
+	double human_block_distance_{1};
+	std::queue<Eigen::Vector2d> human_vector_;
+
 };
 
 
