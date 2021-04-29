@@ -17,6 +17,7 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh, const ros::NodeHandle &p
     // initialization
     ROS_INFO("Initialization");
     this->nearest_neighbors_tree_->add(this->goal_);
+	this->start_time_ = ros::Time::now();
 	//this->initiate_obstacles();
 
     // initialization subscribers
@@ -58,11 +59,10 @@ double MotionPlanner::distance_function(const std::shared_ptr<RRTNode>& a, const
 void MotionPlanner::setup() {
     //Eigen::Vector3d start_position(0,0,5);
     Eigen::Vector3d start_position(0,0,3);
-    this->start_ = std::make_shared<RRTNode>(start_position);
-    //this->quadrotor_ = std::make_shared<RRTNode>(start_position);
+    this->start_ = std::make_shared<RRTNode>(start_position, 0);
     //Eigen::Vector3d goal_position(20,20,5);
     Eigen::Vector3d goal_position(0,10,3);
-    this->goal_ = std::make_shared<RRTNode>(goal_position);
+    this->goal_ = std::make_shared<RRTNode>(goal_position, this->total_plan_time_);
     this->goal_->set_lmc(0);
     this->goal_->set_g_cost(0);
 
@@ -129,6 +129,13 @@ std::shared_ptr<RRTNode> MotionPlanner::generate_random_node() {
 	return random_node;
 }
 
+double MotionPlanner::generate_random_time(const Eigen::Vector3d& state) {
+	double min_time = this->total_plan_time_ - this->compute_cost(state, this->goal_->get_state())/this->quadrotor_speed_;
+	double max_time = this->total_plan_time_;
+	double random_time = min_time + (rand()/double(RAND_MAX)*(max_time - min_time));
+	return random_time;
+}
+
 void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg) {
     //ros::Duration(0.1).sleep();
     Eigen::Vector3d quadrotor_state(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
@@ -158,7 +165,8 @@ void MotionPlanner::goal_point_callback(const geometry_msgs::Point::ConstPtr &ms
 	Eigen::Vector3d goal_point(msg->x, msg->y, msg->z);
 }
 
-void MotionPlanner::human_movement_callback(const geometry_msgs::Point::ConstPtr &msg) {
+/*
+void MotionPlanner::human_movement_callback_region_version(const geometry_msgs::Point::ConstPtr &msg) {
 	Eigen::Vector2d human_position(msg->x, msg->y);
 	this->human_position_ = human_position;
 	this->exist_human_ = true;
@@ -169,6 +177,23 @@ void MotionPlanner::human_movement_callback(const geometry_msgs::Point::ConstPtr
 		this->human_vector_.pop();
 	}
 	this->human_vector_.push(human_position);
+}*/
+
+void MotionPlanner::human_movement_callback(const geometry_msgs::Point::ConstPtr &msg) {
+	if (!this->exist_human_) {
+		Eigen::Vector2d human_start_position(msg->x, msg->y);
+		ros::Time human_start_time = ros::Time::now();
+		this->human_ = std::make_shared<Human>(human_start_position, static_cast<double>((human_start_time - this->start_time_).toSec()));
+		this->exist_human_ = true;
+		this->human_callback_count += 1;
+	}
+	if (this->human_callback_count == 1) {
+		Eigen::Vector2d human_position(msg->x, msg->y);
+		this->human_->second_position_ = human_position;
+		this->human_->if_move_ = true;
+		this->human_callback_count += 1;
+		this->add_human_as_obstacle();
+	}
 }
 
 bool MotionPlanner::solve() {
@@ -242,11 +267,12 @@ void MotionPlanner::update_obstacle() {
 		}
 	}
 
+	/*
 	if (this->add_human_) {
 		this->add_human_as_obstacle();
 		this->add_human_ = false;
 		add_obstacle = true;
-	}
+	}*/
 
 	if (add_obstacle) {
 		this->propogate_descendants();
@@ -264,6 +290,17 @@ void MotionPlanner::remove_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
 
 	// need to update this format to all for, and consider const reference
 	for (auto node : nodes_list) {
+		if (!check_if_node_inside_obstacle(obstacle, node) || check_if_node_inside_all_obstacles(node, true)) {
+			continue;
+		}
+		this->update_lmc(node);
+		if (node->get_lmc() != node->get_g_cost()) {
+			this->verify_queue(node);
+		}
+	}
+	/*
+	// need to update this format to all for, and consider const reference
+	for (auto node : nodes_list) {
 		bool consider_human = true;
 		if (obstacle->get_name() == "human") {
 			consider_human = false;
@@ -275,7 +312,7 @@ void MotionPlanner::remove_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
 		if (node->get_lmc() != node->get_g_cost()) {
 			this->verify_queue(node);
 		}
-	}
+	}*/
 }
 
 bool MotionPlanner::check_if_node_inside_obstacle(const std::shared_ptr<Obstacle>& obstacle, const std::shared_ptr<RRTNode>& node) {
@@ -289,7 +326,7 @@ bool MotionPlanner::check_if_node_inside_obstacle(const std::shared_ptr<Obstacle
 }
 
 bool MotionPlanner::check_if_node_inside_all_obstacles(const std::shared_ptr<RRTNode>& node, bool consider_human) {
-	if (consider_human && this->check_if_node_inside_human(node)) {
+	if (consider_human && this->exist_human_ && this->human_->check_if_node_inside_human(node)) {
 		return true;
 	}
 
@@ -308,29 +345,28 @@ bool MotionPlanner::check_if_node_inside_all_obstacles(const std::shared_ptr<RRT
 	return false;*/
 }
 
+/*
 bool MotionPlanner::check_if_node_inside_human(const std::shared_ptr<RRTNode>& node) {
 	if (!this->exist_human_) {
 		return false;
 	}
 
 	Eigen::Vector3d state = node->get_state();
+	double node_time = node->get_time();
+	Eigen::Vector2d position = this->human_->predict_path(node_time);
 	Eigen::Vector3d human_state(this->human_position_(0), this->human_position_(1), state(2));
 
-	if ((state(2)<this->human_height_) && (this->compute_cost_with_weight(state, human_state)<this->human_block_distance_)) {
-		return true;
-	} else {
-		return false;
-	}
-}
+ 	return (state(2)<this->human_height_) && (this->compute_cost_with_weight(state, human_state)<this->human_block_distance_);
+}*/
 
+/*
 double MotionPlanner::check_if_state_near_human(const Eigen::Vector3d& state) {
 	if (!this->exist_human_) {
 		return 1;
 	}
-
 	double weight = 5;
 	return weight;
-}
+}*/
 
 void MotionPlanner::add_human_as_obstacle() {
 	std::vector<std::shared_ptr<RRTNode>> nodes_list;
@@ -340,7 +376,7 @@ void MotionPlanner::add_human_as_obstacle() {
 		if (check_if_node_inside_human(node)) {
 			this->verify_orphan(node);
 		} else if (check_if_state_near_human(node->get_state())>1 && !check_if_node_inside_all_obstacles(node, false)) {
-			this->update_lmc(node, true);
+			this->update_lmc(node);
 			if (node->get_lmc() != node->get_g_cost()) {
 				this->verify_queue(node);
 			}
@@ -574,17 +610,13 @@ void MotionPlanner::reduce_inconsistency_for_env_update() {
 }
 
 // find the best parent in N+(v)
-void MotionPlanner::update_lmc(std::shared_ptr<RRTNode> node, bool consider_human) {
+void MotionPlanner::update_lmc(std::shared_ptr<RRTNode> node) {
     this->cull_neighbors(node);
 
     std::vector<std::shared_ptr<RRTNode>> n_out;
     n_out.insert(n_out.end(), node->n0_out.begin(), node->n0_out.end());
     n_out.insert(n_out.end(), node->nr_out.begin(), node->nr_out.end());
 
-    if (consider_human) {
-		double inf = std::numeric_limits<double>::infinity();
-		node->set_lmc(inf);
-	}
 
     for (auto it = n_out.begin(); it != n_out.end(); ++it) {
         std::shared_ptr<RRTNode> neighbor = *it;
@@ -660,6 +692,8 @@ bool MotionPlanner::extend(std::shared_ptr<RRTNode> random_node) {
         ROS_INFO("### Cannot find best parent for this random node.");
         return false;
     }
+
+    random_node->set_time(this->generate_random_time(random_node->get_state()));
     this->nearest_neighbors_tree_->add(random_node);
     random_node->parent->children.push_back(random_node);
 
@@ -712,26 +746,31 @@ void MotionPlanner::update_neighbors_list(std::shared_ptr<RRTNode> random_node) 
 }
 
 double MotionPlanner::compute_cost(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2) {
+	return static_cast<double>(std::sqrt((state1 - state2).squaredNorm()));
+}
+
+double MotionPlanner::combine_cost(double cost1, double cost2) {
+	return cost1 + cost2;
+}
+
+bool MotionPlanner::is_cost_better_than(double cost1, double cost2) {
+	return cost1 < cost2;
+}
+
+/*
+double MotionPlanner::compute_cost_human_cost_region_version(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2) {
 	double weight = 1;
-    if (this->exist_human_) {
+	if (this->exist_human_) {
 		double weight_1 = this->check_if_state_near_human(state1);
 		double weight_2 = this->check_if_state_near_human(state2);
 		weight = std::max(weight_1, weight_2);
-    }
-    return this->compute_cost_with_weight(state1, state2, weight);
+	}
+	return this->compute_cost_with_weight(state1, state2, weight);
 }
 
 double MotionPlanner::compute_cost_with_weight(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2, double weight) {
 	double cost = static_cast<double>(std::sqrt((state1 - state2).squaredNorm()));
 	return cost * weight;
-}
-
-double MotionPlanner::combine_cost(double cost1, double cost2) {
-    return cost1 + cost2;
-}
-
-bool MotionPlanner::is_cost_better_than(double cost1, double cost2) {
-    return cost1 < cost2;
-}
+}*/
 
 }

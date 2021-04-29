@@ -82,6 +82,7 @@ target_link_libraries(clock_server
 # node: generate dynamic scene
 cs_add_library(generate_dynamic_scene_dependencies
         src/generate_dynamic_scene/obstacle.cpp
+        src/generate_dynamic_scene/human.cpp
         )
 
 cs_add_executable(generate_dynamic_scene
@@ -116,6 +117,7 @@ cs_add_library(dynamic_motion_planner_dependencies
         src/dynamic_motion_planner/space.cpp
         src/dynamic_motion_planner/edge.cpp
         src/generate_dynamic_scene/obstacle.cpp
+        src/generate_dynamic_scene/human.cpp
         )
 
 cs_add_executable(dynamic_motion_planner

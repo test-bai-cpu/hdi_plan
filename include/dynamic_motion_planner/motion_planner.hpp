@@ -38,6 +38,7 @@
 #include "dynamic_motion_planner/space.hpp"
 #include "utils/types.hpp"
 #include "generate_dynamic_scene/obstacle.hpp"
+#include "generate_dynamic_scene/human.hpp"
 #include <hdi_plan/obstacle_info.h>
 
 
@@ -102,6 +103,7 @@ private:
 
 	ros::Subscriber sub_human_movement_;
 	void human_movement_callback(const geometry_msgs::Point::ConstPtr &msg);
+	//void human_movement_callback_region_version(const geometry_msgs::Point::ConstPtr &msg);
 
     // publisher
     ros::Publisher pub_solution_path_;
@@ -127,7 +129,8 @@ private:
 
     // cost related members
     double compute_cost(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2);
-	double compute_cost_with_weight(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2, double weight=1);
+    //double compute_cost_human_cost_region_version(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2);
+	//double compute_cost_with_weight(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2, double weight=1);
     double combine_cost(double cost1, double cost2);
     bool is_cost_better_than(double cost1, double cost2);
 
@@ -142,7 +145,7 @@ private:
     void verify_queue(std::shared_ptr<RRTNode> node);
     void reduce_inconsistency();
     void reduce_inconsistency_for_env_update();
-    void update_lmc(std::shared_ptr<RRTNode> node, bool consider_human=false);
+    void update_lmc(std::shared_ptr<RRTNode> node);
 
     // find the solution path
     std::vector<Eigen::Vector3d> solution_path;
@@ -167,16 +170,20 @@ private:
 	void make_parent_of(std::shared_ptr<RRTNode> parent_node, std::shared_ptr<RRTNode> node);
 
 	// human part
+	std::shared_ptr<Human> human_;
 	bool exist_human_{false};
-	Eigen::Vector2d human_position_;
-	bool add_human_{false};
+	int human_callback_count{0};
 	void add_human_as_obstacle();
-	double human_height_{2};
-	bool check_if_node_inside_human(const std::shared_ptr<RRTNode>& node);
-	double check_if_state_near_human(const Eigen::Vector3d& state1);
-	double human_block_distance_{1};
-	std::queue<Eigen::Vector2d> human_vector_;
+	//Eigen::Vector2d human_position_;
+	//bool add_human_{false};
+	//bool check_if_node_inside_human(const std::shared_ptr<RRTNode>& node);
+	//double check_if_state_near_human(const Eigen::Vector3d& state1);
 
+	// time dimension
+	double total_plan_time_{30};
+	double generate_random_time(const Eigen::Vector3d& state);
+	double quadrotor_speed_{1};
+	ros::Time start_time_;
 };
 
 

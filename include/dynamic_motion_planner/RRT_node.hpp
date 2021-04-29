@@ -10,7 +10,8 @@ namespace hdi_plan {
 class RRTNode {
 public:
     RRTNode() = default;
-    RRTNode(Eigen::Vector3d state);
+	RRTNode(Eigen::Vector3d state);
+    RRTNode(Eigen::Vector3d state, double time_from_start);
     ~RRTNode();
 
     // for nearest neighbor tree
@@ -55,7 +56,16 @@ public:
         this->g_cost_ = g_cost;
     };
 
-    void set_state_by_vector(Eigen::Vector3d new_state) {
+	double get_time() const {
+		return this->time_;
+	};
+
+	void set_time(double time_from_start) {
+		this->time_ = time_from_start;
+	};
+
+
+	void set_state_by_vector(Eigen::Vector3d new_state) {
         this->state_ = new_state;
     };
 
@@ -78,6 +88,8 @@ private:
     double lmc_;
     double g_cost_;
 
+    // time from start
+	double time_{0};
 };
 
 
