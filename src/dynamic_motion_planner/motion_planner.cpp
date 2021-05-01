@@ -366,9 +366,9 @@ double MotionPlanner::check_if_state_near_human(const Eigen::Vector3d& state) {
 	}
 	double weight = 5;
 	return weight;
-}*/
+}
 
-void MotionPlanner::add_human_as_obstacle() {
+void MotionPlanner::add_human_as_obstacle(const Eigen::Vector2d& human_position) {
 	std::vector<std::shared_ptr<RRTNode>> nodes_list;
 	this->nearest_neighbors_tree_->list(nodes_list);
 	for (auto it = nodes_list.begin(); it != nodes_list.end(); ++it) {
@@ -382,6 +382,23 @@ void MotionPlanner::add_human_as_obstacle() {
 			}
 		}
 	}
+}*/
+
+void MotionPlanner::add_human_as_obstacle() {
+	std::vector<std::shared_ptr<RRTNode>> nodes_list;
+	this->nearest_neighbors_tree_->list(nodes_list);
+
+	for (auto it = nodes_list.begin(); it != nodes_list.end(); ++it) {
+		std::shared_ptr<RRTNode> node = *it;
+		if (!this->human_->check_if_node_inside_human(node)) {
+			continue;
+		}
+		this->verify_orphan(node);
+	}
+
+	this->propogate_descendants();
+	this->reduce_inconsistency();
+
 }
 
 void MotionPlanner::add_obstacle(const std::shared_ptr<Obstacle>& obstacle) {

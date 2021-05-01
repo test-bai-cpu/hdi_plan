@@ -174,6 +174,7 @@ private:
 	bool exist_human_{false};
 	int human_callback_count{0};
 	void add_human_as_obstacle();
+	//void find_nodes_in_human_position(const Eigen::Vector2d& human_position);
 	//Eigen::Vector2d human_position_;
 	//bool add_human_{false};
 	//bool check_if_node_inside_human(const std::shared_ptr<RRTNode>& node);
