@@ -12,8 +12,7 @@ Node_list::Node_list() {
     this->length = 0;
 }
 
-Node_list::~Node_list() {
-}
+Node_list::~Node_list() = default;
 
 int Node_list::get_length() {
     return this->length;

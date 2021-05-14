@@ -118,6 +118,7 @@ cs_add_library(dynamic_motion_planner_dependencies
         src/dynamic_motion_planner/edge.cpp
         src/generate_dynamic_scene/obstacle.cpp
         src/generate_dynamic_scene/human.cpp
+        src/dynamic_motion_planner/chmop.cpp
         )
 
 cs_add_executable(dynamic_motion_planner

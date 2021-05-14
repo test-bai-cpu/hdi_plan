@@ -390,7 +390,8 @@ void MotionPlanner::add_human_as_obstacle() {
 
 	for (auto it = nodes_list.begin(); it != nodes_list.end(); ++it) {
 		std::shared_ptr<RRTNode> node = *it;
-		if (!this->human_->check_if_node_inside_human(node)) {
+
+		if (!this->check_if_edge_collide_human(node, node->parent)) {
 			continue;
 		}
 		this->verify_orphan(node);
@@ -671,6 +672,11 @@ bool MotionPlanner::edge_in_free_space_check(const std::shared_ptr<RRTNode>& nod
 	bool result = (!this->check_if_node_inside_all_obstacles(node1, true)) && (!this->check_if_node_inside_all_obstacles(node2, true));
     std::cout << "Edge in free space check result is " << result << std::endl;
     return result;
+}
+
+bool MotionPlanner::check_if_edge_collide_human(const std::shared_ptr<RRTNode>& node1, const std::shared_ptr<RRTNode>& node2) {
+	bool result = (this->human_->check_if_node_inside_human(node1)) || (this->human_->check_if_node_inside_human(node2));
+	return result;
 }
 
 void MotionPlanner::calculateRRG() {

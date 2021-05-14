@@ -170,10 +170,12 @@ private:
 	void make_parent_of(std::shared_ptr<RRTNode> parent_node, std::shared_ptr<RRTNode> node);
 
 	// human part
+
 	std::shared_ptr<Human> human_;
 	bool exist_human_{false};
 	int human_callback_count{0};
 	void add_human_as_obstacle();
+	bool check_if_edge_collide_human(const std::shared_ptr<RRTNode>& node1, const std::shared_ptr<RRTNode>& node2);
 	//void find_nodes_in_human_position(const Eigen::Vector2d& human_position);
 	//Eigen::Vector2d human_position_;
 	//bool add_human_{false};
