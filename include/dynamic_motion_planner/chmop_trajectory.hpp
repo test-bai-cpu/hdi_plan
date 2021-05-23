@@ -4,6 +4,8 @@
 #include <vector>
 #include <Eigen/Dense>
 
+#include "utils/utility_functions.hpp"
+
 namespace hdi_plan {
 class ChmopTrajectory {
 public:
@@ -34,7 +36,6 @@ private:
 	std::vector<int> group_number_;
 	std::vector<int> group_number_add_;
 
-	double get_distance_between_two_points(const Eigen::Vector3d& point1, const Eigen::Vector3d& point2);
 	void calculate_duration_and_points_num_for_whole_trajectory();
 };
 

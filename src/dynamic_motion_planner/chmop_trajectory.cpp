@@ -6,15 +6,11 @@ ChmopTrajectory::ChmopTrajectory(const std::vector<Eigen::Vector3d>& trajectory_
 	this->calculate_duration_and_points_num_for_whole_trajectory();
 }
 ChmopTrajectory::ChmopTrajectory(Eigen::Vector3d start_point, Eigen::Vector3d end_point) {
-	this->duration_ = this->get_distance_between_two_points(start_point, end_point) / this->speed_;
+	this->duration_ = hdi_plan_utils::get_distance(start_point, end_point) / this->speed_;
 	this->num_points_ = static_cast<int>(this->duration_ / this->discretization_);
 }
 
 ChmopTrajectory::~ChmopTrajectory() = default;
-
-double ChmopTrajectory::get_distance_between_two_points(const Eigen::Vector3d& point1, const Eigen::Vector3d& point2) {
-	return static_cast<double>(std::sqrt((point1 - point2).squaredNorm()));
-}
 
 void ChmopTrajectory::calculate_duration_and_points_num_for_whole_trajectory() {
 	double discretize_length = this->discretization_ * this->speed_;
@@ -29,7 +25,7 @@ void ChmopTrajectory::calculate_duration_and_points_num_for_whole_trajectory() {
 			count += 1;
 			continue;
 		}
-		double distance = this->get_distance_between_two_points(last_point, path_point);
+		double distance = hdi_plan_utils::get_distance(last_point, path_point);
 		duration += distance / this->speed_;
 		if (distance < discretize_length) {
 			total_number_of_points += 1;
@@ -44,6 +40,7 @@ void ChmopTrajectory::calculate_duration_and_points_num_for_whole_trajectory() {
 	}
 
 	this->num_points_ = total_number_of_points + 1;
+	this->group_number_.back() += 1;
 	this->duration_ = duration;
 	int total_num_temp = 0;
 	for (int num : this->group_number_) {
@@ -53,12 +50,37 @@ void ChmopTrajectory::calculate_duration_and_points_num_for_whole_trajectory() {
 }
 
 Eigen::Vector3d ChmopTrajectory::get_position_by_index(int index) {
-	// the index is start from 1
-	for (int num : this->group_number_add_) {
-		if (index > num) {
-
+	// the index starts from 1
+	int interval_index = 0;
+	for (int i=0; i<this->group_number_add_.size(); i++) {
+		if (index <= this->group_number_add_[i]) {
+			interval_index = i;
+			break;
 		}
 	}
+
+	Eigen::Vector3d start_point = this->trajectory_points_[interval_index];
+	Eigen::Vector3d end_point = this->trajectory_points_[interval_index+1];
+	int start_index, end_index;
+	if (interval_index == 0) {
+		start_index = 1;
+		end_index = this->group_number_add_[interval_index] + 1;
+	} else if (interval_index == this->group_number_add_.size()-1) {
+		start_index = this->group_number_add_[interval_index-1] +1;
+		end_index = this->group_number_add_[interval_index];
+	} else {
+		start_index = this->group_number_add_[interval_index-1] + 1;
+		end_index = this->group_number_add_[interval_index]+1;
+	}
+
+	double ratio = (index - start_index) / static_cast<double>(end_index - start_index);
+	double x = (end_point(0) - start_point(0)) * ratio + start_point(0);
+	double y = (end_point(1) - start_point(1)) * ratio + start_point(1);
+	double z = (end_point(2) - start_point(2)) * ratio + start_point(2);
+	Eigen::Vector3d index_point(x,y,z);
+
+	return index_point;
+
 }
 
 }

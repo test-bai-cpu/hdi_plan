@@ -4,15 +4,20 @@
 #include <Eigen/Dense>
 #include <Eigen/StdVector>
 
+#include <map>
+#include <limits>
 #include <vector>
 #include <memory>
 
+#include "generate_dynamic_scene/obstacle.hpp"
 #include "dynamic_motion_planner/chmop_trajectory.hpp"
+#include "generate_dynamic_scene/obstacle.hpp"
+#include "utils/utility_functions.hpp"
 
 namespace hdi_plan {
 class Chmop {
 public:
-	Chmop(const std::shared_ptr<ChmopTrajectory>& trajectory);
+	Chmop(const std::shared_ptr<ChmopTrajectory>& trajectory, const std::map<std::string, std::shared_ptr<Obstacle>>& obstacle_map);
 	~Chmop();
 
 	std::vector<Eigen::Vector3d> get_optimized_trajectory() const {
@@ -25,6 +30,7 @@ private:
 	double best_trajectory_cost_;
 	int num_vars_;
 	int last_improvement_iteration_;
+	bool is_collsion_free_{true};
 
 	// matrix
 	Eigen::VectorXd smoothness_increments_;
@@ -38,6 +44,16 @@ private:
 	Eigen::Matrix3d jacobian_jacobian_tranpose_;
 
 	// collision cost
+	std::map<std::string, std::shared_ptr<Obstacle>> obstacle_map_;
+	std::vector<Eigen::Vector3d> collision_point_pos_;
+	std::vector<Eigen::Vector3d> collision_point_vel_;
+	std::vector<Eigen::Vector3d> collision_point_acc_;
+	std::vector<double> collision_point_potential_;
+	std::vector<double> collision_point_vel_mag_;
+	std::vector<Eigen::Vector3d> collision_point_potential_gradient_;
+
+	double get_potential(const Eigen::Vector3d& point);
+	void get_collision_point_pos();
 
 
 	// optimize process
@@ -52,6 +68,8 @@ private:
 	double calculate_total_increments();
 	void add_increments_to_trajectory();
 
+	int worst_collision_cost_state_{-1};
+
 	// parameters
 	double planning_time_limit_{6.0};
 	int max_iterations_{50};
@@ -62,7 +80,11 @@ private:
 	double smoothness_cost_velocity_{0.0};
 	double smoothness_cost_acceleration_{1.0};
 	double smoothness_cost_jerk_{0.0};
-	double righe_factor_{0.0};
+	double ridge_factor_{0.0};
+	double drone_radius_{0.5};
+	double min_clearence_{0.2};
+
+
 };
 
 }

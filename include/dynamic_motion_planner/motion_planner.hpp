@@ -36,6 +36,7 @@
 #include "dynamic_motion_planner/quadrotor.hpp"
 #include "dynamic_motion_planner/RRT_node.hpp"
 #include "dynamic_motion_planner/space.hpp"
+#include "dynamic_motion_planner/chmop.hpp"
 #include "utils/types.hpp"
 #include "generate_dynamic_scene/obstacle.hpp"
 #include "generate_dynamic_scene/human.hpp"
@@ -57,6 +58,9 @@ private:
     // debug
     int debug{0};
     int iteration_count{0};
+
+    // drone
+    double drone_radius{0.5};
 
     // ros nodes
     ros::NodeHandle nh_;
@@ -170,7 +174,6 @@ private:
 	void make_parent_of(std::shared_ptr<RRTNode> parent_node, std::shared_ptr<RRTNode> node);
 
 	// human part
-
 	std::shared_ptr<Human> human_;
 	bool exist_human_{false};
 	int human_callback_count{0};

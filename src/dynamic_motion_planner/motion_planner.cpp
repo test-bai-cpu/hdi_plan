@@ -317,8 +317,7 @@ void MotionPlanner::remove_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
 
 bool MotionPlanner::check_if_node_inside_obstacle(const std::shared_ptr<Obstacle>& obstacle, const std::shared_ptr<RRTNode>& node) {
 	double distance = this->compute_cost(obstacle->get_position(), node->get_state());
-	double keep_distance = obstacle->get_size()/2 + 1;
-	if (distance < keep_distance) {
+	if (distance - this->drone_radius < obstacle->get_size()/2 + 1) {
         ROS_INFO("The node is inside obstacle");
 		return true;
 	}
