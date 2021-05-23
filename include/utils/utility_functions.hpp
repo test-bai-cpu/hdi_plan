@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Eigen/Dense>
-
+#include <random>
 namespace hdi_plan_utils {
 
 static const int DIFF_RULE_LENGTH = 7;
@@ -15,6 +15,13 @@ static const double DIFF_RULES[3][DIFF_RULE_LENGTH] = {
 
 double get_distance(const Eigen::Vector3d& point1, const Eigen::Vector3d& point2) {
 	return static_cast<double>(std::sqrt((point1 - point2).squaredNorm()));
+}
+
+double get_random_double()
+{
+	std::default_random_engine seed;
+	std::uniform_real_distribution<> uniform(0.0, 1.0);
+	return uniform(seed);
 }
 
 }

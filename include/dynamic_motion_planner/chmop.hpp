@@ -33,14 +33,14 @@ private:
 	bool is_collsion_free_{true};
 
 	// matrix
-	Eigen::VectorXd smoothness_increments_;
-	Eigen::VectorXd collision_increments_;
-	Eigen::VectorXd final_increments_;
+	Eigen::MatrixXd smoothness_increments_;
+	Eigen::MatrixXd collision_increments_;
+	Eigen::MatrixXd final_increments_;
 
 	// temporary variables
 	Eigen::VectorXd smoothness_derivative_;
-	Eigen::Vector3d jacobian_;
-	Eigen::Vector3d jacobian_pseudo_inverse_;
+	Eigen::MatrixXd jacobian_;
+	Eigen::MatrixXd jacobian_pseudo_inverse_;
 	Eigen::Matrix3d jacobian_jacobian_tranpose_;
 
 	// collision cost
@@ -54,6 +54,7 @@ private:
 
 	double get_potential(const Eigen::Vector3d& point);
 	void get_collision_point_pos();
+	void get_jacobian(int trajectory_point, const Eigen::Vector3d& collision_point_pos);
 
 
 	// optimize process
@@ -83,6 +84,7 @@ private:
 	double ridge_factor_{0.0};
 	double drone_radius_{0.5};
 	double min_clearence_{0.2};
+	bool use_stochastic_descent_{false};
 
 
 };

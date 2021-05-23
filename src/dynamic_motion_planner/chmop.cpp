@@ -15,9 +15,9 @@ void Chmop::initialize() {
 	this->num_vars_ = this->original_trajectory_->get_num_points();
 
 	// allocate memory for matrices:
-	this->smoothness_increments_ = Eigen::VectorXd::Zero(this->num_vars_);
-	this->collision_increments_ = Eigen::VectorXd::Zero(this->num_vars_);
-	this->final_increments_ = Eigen::VectorXd::Zero(this->num_vars_);
+	this->smoothness_increments_ = Eigen::MatrixXd::Zero(this->num_vars_, 1);
+	this->collision_increments_ = Eigen::MatrixXd::Zero(this->num_vars_, 1);
+	this->final_increments_ = Eigen::MatrixXd::Zero(this->num_vars_, 1);
 	this->smoothness_derivative_ = Eigen::VectorXd::Zero(this->num_vars_);
 
 	this->collision_point_pos_.resize(this->num_vars_);
@@ -26,8 +26,13 @@ void Chmop::initialize() {
 	this->collision_point_vel_mag_.resize(this->num_vars_);
 	this->collision_point_potential_.resize(this->num_vars_);
 	this->collision_point_potential_gradient_.resize(this->num_vars_);
-	this->last_improvement_iteration_ = -1;
 
+	this->jacobian_ = Eigen::MatrixXd::Zero(3, 1);
+	this->jacobian_pseudo_inverse_ = Eigen::MatrixXd::Zero(1, 3);
+	this->jacobian_jacobian_tranpose_ = Eigen::MatrixXd::Zero(3, 3);
+
+
+	this->last_improvement_iteration_ = -1;
 	this->get_collision_point_pos();
 
 }
@@ -142,9 +147,50 @@ double Chmop::calculate_collision_increments() {
 
 	this->collision_increments_.setZero(this->num_vars_);
 
+	int start_point = 0;
+	int end_point = this->num_vars_ - 1;
+	if (this->use_stochastic_descent_) {
+		start_point = static_cast<int>(hdi_plan_utils::get_random_double() * (this->num_vars_ - 1));
+		end_point = start_point;
+	}
+
+	for (int i = start_point; i <= end_point; i++) {
+		potential = collision_point_potential_[i];
+		if (potential < 0.0001)
+			continue;
+		potential_gradient = -collision_point_potential_gradient_[i];
+		vel_mag = collision_point_vel_mag_[i];
+		vel_mag_sq = vel_mag * vel_mag;
+
+		normalized_velocity = this->collision_point_vel_[i] / vel_mag;
+		orthogonal_projector = Eigen::Matrix3d::Identity() - (normalized_velocity * normalized_velocity.transpose());
+		curvature_vector = (orthogonal_projector * this->collision_point_acc_[i]) / vel_mag_sq;
+		cartesian_gradient = vel_mag * (orthogonal_projector * potential_gradient - potential * curvature_vector);
+
+		this->collision_increments_.row(i) -= Eigen::MatrixXd::Ones(1,3) * cartesian_gradient;
+	}
 
 	return 0;
 }
+
+/*
+void Chmop::get_jacobian(int trajectory_point, const Eigen::Vector3d &collision_point_pos) {
+	if (isParent(joint_name, joint_names_[j]))
+	{
+		Eigen::Vector3d column = joint_axes_[trajectory_point].cross(collision_point_pos - joint_positions_[trajectory_point]);
+
+		this->jacobian_.col(0)[0] = column.x();
+		this->jacobian_.col(0)[1] = column.y();
+		this->jacobian_.col(0)[2] = column.z();
+	}
+	else
+	{
+		this->jacobian_.col(0)[0] = 0.0;
+		this->jacobian_.col(0)[1] = 0.0;
+		this->jacobian_.col(0)[2] = 0.0;
+	}
+}*/
+
 
 double Chmop::calculate_total_increments() {
 	return 0;
@@ -153,6 +199,7 @@ double Chmop::calculate_total_increments() {
 void Chmop::add_increments_to_trajectory() {
 
 }
+
 
 
 }
