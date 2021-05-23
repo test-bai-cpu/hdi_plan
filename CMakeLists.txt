@@ -119,6 +119,7 @@ cs_add_library(dynamic_motion_planner_dependencies
         src/generate_dynamic_scene/obstacle.cpp
         src/generate_dynamic_scene/human.cpp
         src/dynamic_motion_planner/chmop.cpp
+        src/dynamic_motion_planner/chmop_cost.cpp
         src/dynamic_motion_planner/chmop_trajectory.cpp
         )
 

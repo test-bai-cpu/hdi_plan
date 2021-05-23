@@ -14,6 +14,12 @@ Chmop::~Chmop() = default;
 void Chmop::initialize() {
 	this->num_vars_ = this->original_trajectory_->get_num_points();
 
+	// get joint cost
+	std::vector<double> derivative_costs(3);
+	derivative_costs[0] = this->smoothness_cost_velocity_;
+	derivative_costs[1] = this->smoothness_cost_acceleration_;
+	derivative_costs[2] = this->smoothness_cost_jerk_;
+
 	// allocate memory for matrices:
 	this->smoothness_increments_ = Eigen::MatrixXd::Zero(this->num_vars_, 1);
 	this->collision_increments_ = Eigen::MatrixXd::Zero(this->num_vars_, 1);

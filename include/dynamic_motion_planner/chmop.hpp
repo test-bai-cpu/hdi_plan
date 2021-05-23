@@ -11,6 +11,7 @@
 
 #include "generate_dynamic_scene/obstacle.hpp"
 #include "dynamic_motion_planner/chmop_trajectory.hpp"
+#include "dynamic_motion_planner/chmop_cost.hpp"
 #include "generate_dynamic_scene/obstacle.hpp"
 #include "utils/utility_functions.hpp"
 
