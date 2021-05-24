@@ -17,6 +17,30 @@ public:
 		return this->num_points_;
 	};
 
+	int get_num_points_diff() const {
+		return this->num_points_diff_;
+	};
+
+	int get_num_points_free() const {
+		return this->num_points_free_;
+	};
+
+	int get_start_extra() const {
+		return this->start_extra_;
+	};
+
+	int get_end_extra() const {
+		return this->end_extra_;
+	};
+
+	int get_start_index() const {
+		return this->start_index_;
+	};
+
+	int get_end_index() const {
+		return this->end_index_;
+	};
+
 	int get_duration() const {
 		return this->duration_;
 	};
@@ -30,13 +54,23 @@ public:
 private:
 	std::vector<Eigen::Vector3d> trajectory_points_;
 	double duration_;
+	double duration_diff_;
 	int num_points_;
+	int num_points_diff_;
+	int num_points_free_;
 	double discretization_{0.01}; // every interval is 0.01s
 	double speed_{1.0};
 	std::vector<int> group_number_;
 	std::vector<int> group_number_add_;
 
-	void calculate_duration_and_points_num_for_whole_trajectory();
+	int start_index_origin;
+	int end_index_origin_;
+	int start_index_;
+	int end_index_;
+	int start_extra_{0};
+	int end_extra_{0};
+	void calculate_duration_and_points_num_for_full_trajectory();
+	void update_trajectory_for_diff();
 };
 
 

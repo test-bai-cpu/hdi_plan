@@ -3,7 +3,8 @@
 namespace hdi_plan {
 ChmopTrajectory::ChmopTrajectory(const std::vector<Eigen::Vector3d>& trajectory_points) {
 	this->trajectory_points_ = trajectory_points;
-	this->calculate_duration_and_points_num_for_whole_trajectory();
+	this->calculate_duration_and_points_num_for_full_trajectory();
+	this->update_trajectory_for_diff();
 }
 ChmopTrajectory::ChmopTrajectory(Eigen::Vector3d start_point, Eigen::Vector3d end_point) {
 	this->duration_ = hdi_plan_utils::get_distance(start_point, end_point) / this->speed_;
@@ -12,7 +13,19 @@ ChmopTrajectory::ChmopTrajectory(Eigen::Vector3d start_point, Eigen::Vector3d en
 
 ChmopTrajectory::~ChmopTrajectory() = default;
 
-void ChmopTrajectory::calculate_duration_and_points_num_for_whole_trajectory() {
+void ChmopTrajectory::update_trajectory_for_diff() {
+	int diff_rule_length = hdi_plan_utils::DIFF_RULE_LENGTH;
+	this->start_extra_ = (diff_rule_length - 1) - this->start_index_origin; // 5
+	this->end_extra_ = (diff_rule_length - 1) - ((this->num_points_ - 1) - this->end_index_origin_); // 5
+
+	this->num_points_diff_ = this->num_points_ + start_extra + end_extra;
+	this->num_points_free_ = this->end_index_origin_ - this->start_index_origin + 1;
+	this->start_index_ = diff_rule_length - 1; // start from 6, when original is start from 0, start_point and goal is fixed, not free.
+	this->end_index_ = (this->num_points_diff_ - 1) - (diff_rule_length - 1); // end at num_points_free + 3
+	this->duration_diff_ = (this->num_points_diff_ - 1) * this->discretization_;
+}
+
+void ChmopTrajectory::calculate_duration_and_points_num_for_full_trajectory() {
 	double discretize_length = this->discretization_ * this->speed_;
 	int count = 0;
 	double duration = 0.0;
@@ -40,6 +53,8 @@ void ChmopTrajectory::calculate_duration_and_points_num_for_whole_trajectory() {
 	}
 
 	this->num_points_ = total_number_of_points + 1;
+	this->start_index_origin = 1;
+	this->end_index_origin_ = this->num_points_ - 2;
 	this->group_number_.back() += 1;
 	this->duration_ = duration;
 	int total_num_temp = 0;

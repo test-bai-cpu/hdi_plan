@@ -26,12 +26,17 @@ public:
 	}
 
 private:
-	std::shared_ptr<ChmopTrajectory> original_trajectory_;
+	std::shared_ptr<ChmopTrajectory> full_trajectory_;
 	std::vector<Eigen::Vector3d> optimized_trajectory_;
 	double best_trajectory_cost_;
-	int num_vars_;
+	int num_vars_all_;
+	int num_vars_free_;
+	int num_vars_origin_;
+	int free_vars_start_;
+	int free_vars_end_;
 	int last_improvement_iteration_;
 	bool is_collsion_free_{true};
+	int iteration_{0};
 
 	// matrix
 	Eigen::MatrixXd smoothness_increments_;
@@ -44,6 +49,9 @@ private:
 	Eigen::MatrixXd jacobian_pseudo_inverse_;
 	Eigen::Matrix3d jacobian_jacobian_tranpose_;
 
+	// smoothness cost
+	std::shared_ptr<ChompCost> joint_cost_;
+
 	// collision cost
 	std::map<std::string, std::shared_ptr<Obstacle>> obstacle_map_;
 	std::vector<Eigen::Vector3d> collision_point_pos_;
@@ -55,7 +63,7 @@ private:
 
 	double get_potential(const Eigen::Vector3d& point);
 	void get_collision_point_pos();
-	void get_jacobian(int trajectory_point, const Eigen::Vector3d& collision_point_pos);
+	//void get_jacobian(int trajectory_point, const Eigen::Vector3d& collision_point_pos);
 
 
 	// optimize process
