@@ -1,8 +1,8 @@
-#include "dynamic_motion_planner/chmop_cost.hpp"
+#include "dynamic_motion_planner/chomp_cost.hpp"
 
 namespace hdi_plan {
 
-ChompCost::ChompCost(const std::shared_ptr<ChmopTrajectory>& trajectory, const std::vector<double> &derivative_costs,
+ChompCost::ChompCost(const std::shared_ptr<ChompTrajectory>& trajectory, const std::vector<double> &derivative_costs,
 					 double ridge_factor) {
 	int num_vars_all = trajectory->get_num_points_diff();
 	int num_vars_free = num_vars_all - 2 * (hdi_plan_utils::DIFF_RULE_LENGTH - 1);
@@ -51,6 +51,15 @@ void ChompCost::scale(double scale)
 	this->quad_cost_inv_ *= inv_scale;
 	this->quad_cost_ *= scale;
 	this->quad_cost_full_ *= scale;
+}
+
+double ChompCost::getCost(const Eigen::MatrixXd::ColXpr &joint_trajectory) const {
+	return joint_trajectory.dot(this->quad_cost_full_ * joint_trajectory);
+}
+
+Eigen::MatrixXd ChompCost::getDerivative(const Eigen::MatrixXd::ColXpr &joint_trajectory) const {
+	Eigen::MatrixXd derivative = this->quad_cost_full_ * (2.0 * joint_trajectory);
+	return derivative;
 }
 
 }

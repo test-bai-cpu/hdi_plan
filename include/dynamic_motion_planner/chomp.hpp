@@ -10,23 +10,23 @@
 #include <memory>
 
 #include "generate_dynamic_scene/obstacle.hpp"
-#include "dynamic_motion_planner/chmop_trajectory.hpp"
-#include "dynamic_motion_planner/chmop_cost.hpp"
+#include "dynamic_motion_planner/chomp_trajectory.hpp"
+#include "dynamic_motion_planner/chomp_cost.hpp"
 #include "generate_dynamic_scene/obstacle.hpp"
 #include "utils/utility_functions.hpp"
 
 namespace hdi_plan {
-class Chmop {
+class Chomp {
 public:
-	Chmop(const std::shared_ptr<ChmopTrajectory>& trajectory, const std::map<std::string, std::shared_ptr<Obstacle>>& obstacle_map);
-	~Chmop();
+	Chomp(const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<std::string, std::shared_ptr<Obstacle>>& obstacle_map);
+	~Chomp();
 
 	std::vector<Eigen::Vector3d> get_optimized_trajectory() const {
 		return this->optimized_trajectory_;
 	}
 
 private:
-	std::shared_ptr<ChmopTrajectory> full_trajectory_;
+	std::shared_ptr<ChompTrajectory> full_trajectory_;
 	std::vector<Eigen::Vector3d> optimized_trajectory_;
 	double best_trajectory_cost_;
 	int num_vars_all_;
@@ -37,6 +37,10 @@ private:
 	int last_improvement_iteration_;
 	bool is_collsion_free_{true};
 	int iteration_{0};
+
+	// joint
+	int num_joints_{3};
+	std::vector<std::shared_ptr<ChompCost>> joint_costs_;
 
 	// matrix
 	Eigen::MatrixXd smoothness_increments_;
@@ -50,7 +54,7 @@ private:
 	Eigen::Matrix3d jacobian_jacobian_tranpose_;
 
 	// smoothness cost
-	std::shared_ptr<ChompCost> joint_cost_;
+	//std::shared_ptr<ChompCost> joint_cost_;
 
 	// collision cost
 	std::map<std::string, std::shared_ptr<Obstacle>> obstacle_map_;
@@ -73,9 +77,9 @@ private:
 	void perform_forward_kinematics();
 	double get_collision_cost();
 	double get_smoothness_cost();
-	double calculate_smoothness_increments();
-	double calculate_collision_increments();
-	double calculate_total_increments();
+	void calculate_smoothness_increments();
+	void calculate_collision_increments();
+	void calculate_total_increments();
 	void add_increments_to_trajectory();
 
 	int worst_collision_cost_state_{-1};
@@ -93,6 +97,7 @@ private:
 	double ridge_factor_{0.0};
 	double drone_radius_{0.5};
 	double min_clearence_{0.2};
+	double joint_update_limit_{0.1};
 	bool use_stochastic_descent_{false};
 
 

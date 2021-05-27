@@ -1,31 +1,33 @@
-#include "dynamic_motion_planner/chmop_trajectory.hpp"
+#include "dynamic_motion_planner/chomp_trajectory.hpp"
 
 namespace hdi_plan {
-ChmopTrajectory::ChmopTrajectory(const std::vector<Eigen::Vector3d>& trajectory_points) {
+ChompTrajectory::ChompTrajectory(const std::vector<Eigen::Vector3d>& trajectory_points) {
 	this->trajectory_points_ = trajectory_points;
 	this->calculate_duration_and_points_num_for_full_trajectory();
 	this->update_trajectory_for_diff();
+	this->fill_discretized_points();
+	this->fill_trajectory();
 }
-ChmopTrajectory::ChmopTrajectory(Eigen::Vector3d start_point, Eigen::Vector3d end_point) {
+ChompTrajectory::ChompTrajectory(const Eigen::Vector3d& start_point, const Eigen::Vector3d& end_point) {
 	this->duration_ = hdi_plan_utils::get_distance(start_point, end_point) / this->speed_;
 	this->num_points_ = static_cast<int>(this->duration_ / this->discretization_);
 }
 
-ChmopTrajectory::~ChmopTrajectory() = default;
+ChompTrajectory::~ChompTrajectory() = default;
 
-void ChmopTrajectory::update_trajectory_for_diff() {
+void ChompTrajectory::update_trajectory_for_diff() {
 	int diff_rule_length = hdi_plan_utils::DIFF_RULE_LENGTH;
 	this->start_extra_ = (diff_rule_length - 1) - this->start_index_origin; // 5
 	this->end_extra_ = (diff_rule_length - 1) - ((this->num_points_ - 1) - this->end_index_origin_); // 5
 
-	this->num_points_diff_ = this->num_points_ + start_extra + end_extra;
+	this->num_points_diff_ = this->num_points_ + this->start_extra_ + this->end_extra_;
 	this->num_points_free_ = this->end_index_origin_ - this->start_index_origin + 1;
 	this->start_index_ = diff_rule_length - 1; // start from 6, when original is start from 0, start_point and goal is fixed, not free.
 	this->end_index_ = (this->num_points_diff_ - 1) - (diff_rule_length - 1); // end at num_points_free + 3
 	this->duration_diff_ = (this->num_points_diff_ - 1) * this->discretization_;
 }
 
-void ChmopTrajectory::calculate_duration_and_points_num_for_full_trajectory() {
+void ChompTrajectory::calculate_duration_and_points_num_for_full_trajectory() {
 	double discretize_length = this->discretization_ * this->speed_;
 	int count = 0;
 	double duration = 0.0;
@@ -64,7 +66,29 @@ void ChmopTrajectory::calculate_duration_and_points_num_for_full_trajectory() {
 	}
 }
 
-Eigen::Vector3d ChmopTrajectory::get_position_by_index(int index) {
+void ChompTrajectory::fill_trajectory() {
+	this->trajectory_.resize(this->num_points_diff_, this->num_joints_);
+	for (int i=0; i<this->num_points_; i++) {
+		for (int j=0; j<this->num_joints_; j++) {
+			this->trajectory_.row(i+this->start_extra_)[j] = this->discretized_points_[i](j);
+		}
+	}
+	for (int i=0; i<this->start_extra_; i++) {
+		this->trajectory_.row(i) = this->trajectory_.row(this->start_extra_);
+	}
+	for (int i=this->num_points_diff_-this->end_extra_; i<this->num_points_diff_; i++) {
+		this->trajectory_.row(i) = this->trajectory_.row(this->num_points_diff_-this->end_extra_-1);
+	}
+}
+
+void ChompTrajectory::fill_discretized_points() {
+	this->discretized_points_.reserve(this->num_points_);
+	for (int i=1; i<=this->num_points_; i++) {
+		this->discretized_points_.push_back(this->calculate_position_by_index(i));
+	}
+}
+
+Eigen::Vector3d ChompTrajectory::calculate_position_by_index(int index) {
 	// the index starts from 1
 	int interval_index = 0;
 	for (int i=0; i<this->group_number_add_.size(); i++) {
@@ -96,6 +120,10 @@ Eigen::Vector3d ChmopTrajectory::get_position_by_index(int index) {
 
 	return index_point;
 
+}
+
+void ChompTrajectory::add_increments_to_trajectory(Eigen::MatrixXd::ColXpr increment, int joint_number, double scale) {
+	this->trajectory_.block(start_index_, 0, this->num_points_free_, this->num_joints_).col(joint_number) += scale * increment;
 }
 
 }

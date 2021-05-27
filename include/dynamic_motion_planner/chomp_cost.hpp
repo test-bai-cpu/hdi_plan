@@ -6,13 +6,13 @@
 #include <Eigen/Dense>
 #include <Eigen/StdVector>
 
-#include "dynamic_motion_planner/chmop_trajectory.hpp"
+#include "dynamic_motion_planner/chomp_trajectory.hpp"
 #include "utils/utility_functions.hpp"
 
 namespace hdi_plan {
 class ChompCost {
 public:
-	ChompCost(const std::shared_ptr<ChmopTrajectory>& trajectory, const std::vector<double>& derivative_costs, double ridge_factor = 0.0);
+	ChompCost(const std::shared_ptr<ChompTrajectory>& trajectory, const std::vector<double>& derivative_costs, double ridge_factor = 0.0);
 	~ChompCost();
 
 	double getMaxQuadCostInvValue() const {
@@ -24,10 +24,10 @@ public:
 	Eigen::MatrixXd getQuadraticCost() const {
 		return this->quad_cost_;
 	}
-
-
 	void scale(double scale);
+	double getCost(const Eigen::MatrixXd::ColXpr& joint_trajectory) const;
 
+	Eigen::MatrixXd getDerivative(const Eigen::MatrixXd::ColXpr& joint_trajectory) const;
 private:
 	Eigen::MatrixXd quad_cost_full_;
 	Eigen::MatrixXd quad_cost_;

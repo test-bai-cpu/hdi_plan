@@ -118,9 +118,9 @@ cs_add_library(dynamic_motion_planner_dependencies
         src/dynamic_motion_planner/edge.cpp
         src/generate_dynamic_scene/obstacle.cpp
         src/generate_dynamic_scene/human.cpp
-        src/dynamic_motion_planner/chmop.cpp
-        src/dynamic_motion_planner/chmop_cost.cpp
-        src/dynamic_motion_planner/chmop_trajectory.cpp
+        src/dynamic_motion_planner/chomp.cpp
+        src/dynamic_motion_planner/chomp_trajectory.cpp
+        src/dynamic_motion_planner/chomp_cost.cpp
         )
 
 cs_add_executable(dynamic_motion_planner

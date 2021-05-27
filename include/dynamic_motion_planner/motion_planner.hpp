@@ -36,7 +36,7 @@
 #include "dynamic_motion_planner/quadrotor.hpp"
 #include "dynamic_motion_planner/RRT_node.hpp"
 #include "dynamic_motion_planner/space.hpp"
-#include "dynamic_motion_planner/chmop.hpp"
+#include "dynamic_motion_planner/chomp.hpp"
 #include "utils/types.hpp"
 #include "generate_dynamic_scene/obstacle.hpp"
 #include "generate_dynamic_scene/human.hpp"
