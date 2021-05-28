@@ -54,11 +54,13 @@ void Chomp::initialize() {
 	//this->jacobian_pseudo_inverse_ = Eigen::MatrixXd::Zero(1, 3);
 	//this->jacobian_jacobian_tranpose_ = Eigen::MatrixXd::Zero(3, 3);
 
+	this->collision_free_iteration_ = 0;
 	this->last_improvement_iteration_ = -1;
 }
 
 bool Chomp::optimize() {
-	bool optimization_result = false;
+	bool should_break_out = false;
+	ros::WallTime start_time = ros::WallTime::now();
 	for (this->iteration_=0; this->iteration_ < this->max_iterations_; this->iteration_++) {
 		perform_forward_kinematics();
 		double c_cost = this->get_collision_cost();
@@ -66,6 +68,7 @@ bool Chomp::optimize() {
 		double cost = c_cost + s_cost;
 
 		if (this->iteration_ == 0 || cost < this->best_trajectory_cost_) {
+			this->best_trajectory_ = this->full_trajectory_->get_trajectory();
 			this->best_trajectory_cost_ = cost;
 			this->last_improvement_iteration_ = this->iteration_;
 		}
@@ -74,8 +77,24 @@ bool Chomp::optimize() {
 		this->calculate_collision_increments();
 		this->calculate_total_increments();
 		this->add_increments_to_trajectory();
+
+		if (!this->filter_mode_ && c_cost < this->collision_threshold_) this->is_collsion_free_ = true;
+		if (this->is_collsion_free_) this->collision_free_iteration_ += 1;
+
+		// break conditions
+		if (this->collision_free_iteration_ > this->max_iterations_after_collision_free_) break;
+		if ((ros::WallTime::now() - start_time).toSec() > this->planning_time_limit_)
+		{
+			ROS_WARN("Breaking out early due to time limit constraints.");
+			break;
+		}
 	}
-	return optimization_result;
+
+	ROS_INFO("Terminated after %d iterations, using path from iteration %d", this->iteration_, this->last_improvement_iteration_);
+	ROS_INFO("Optimization core finished in %f sec", (ros::WallTime::now() - start_time).toSec());
+	ROS_INFO_STREAM("Time per iteration " << (ros::WallTime::now() - start_time).toSec() / (this->iteration_ * 1.0));
+
+	return is_collsion_free_;
 }
 
 void Chomp::get_collision_point_pos() {
@@ -242,7 +261,6 @@ void Chomp::get_jacobian(int trajectory_point, const Eigen::Vector3d &collision_
 		this->jacobian_.col(0)[2] = 0.0;
 	}
 }*/
-
 
 void Chomp::calculate_total_increments() {
 	for (int i = 0; i < this->num_joints_; i++) {

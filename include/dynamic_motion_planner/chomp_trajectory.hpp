@@ -13,6 +13,10 @@ public:
 	ChompTrajectory(const Eigen::Vector3d& start_point, const Eigen::Vector3d& end_point);
 	~ChompTrajectory();
 
+	Eigen::MatrixXd get_trajectory() const {
+		return this->trajectory_;
+	}
+
 	int get_num_points() const {
 		return this->num_points_;
 	};

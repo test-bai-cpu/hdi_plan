@@ -9,6 +9,8 @@
 #include <vector>
 #include <memory>
 
+#include <ros/ros.h>
+
 #include "generate_dynamic_scene/obstacle.hpp"
 #include "dynamic_motion_planner/chomp_trajectory.hpp"
 #include "dynamic_motion_planner/chomp_cost.hpp"
@@ -28,19 +30,25 @@ public:
 private:
 	std::shared_ptr<ChompTrajectory> full_trajectory_;
 	std::vector<Eigen::Vector3d> optimized_trajectory_;
-	double best_trajectory_cost_;
 	int num_vars_all_;
 	int num_vars_free_;
 	int num_vars_origin_;
 	int free_vars_start_;
 	int free_vars_end_;
 	int last_improvement_iteration_;
-	bool is_collsion_free_{true};
+	bool is_collsion_free_{false};
 	int iteration_{0};
+	int collision_free_iteration_{0};
+	bool filter_mode_{false};
+	double collision_threshold_{0.07};
 
 	// joint
 	int num_joints_{3};
 	std::vector<std::shared_ptr<ChompCost>> joint_costs_;
+
+	// trajectory
+	Eigen::MatrixXd best_trajectory_;
+	double best_trajectory_cost_;
 
 	// matrix
 	Eigen::MatrixXd smoothness_increments_;
