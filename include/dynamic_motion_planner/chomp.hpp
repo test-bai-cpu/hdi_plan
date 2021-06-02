@@ -81,6 +81,7 @@ private:
 	// optimize process
 	void initialize();
 	bool optimize();
+	void convert_matrix_to_trajectory_points_vector();
 
 	void perform_forward_kinematics();
 	double get_collision_cost();

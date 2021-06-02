@@ -5,7 +5,10 @@
 // ros
 #include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
-#include "std_msgs/String.h"
+#include <std_msgs/String.h>
+#include <std_msgs/Empty.h>
+#include <std_msgs/Bool.h>
+#include <std_msgs/Float64.h>
 
 // rpg quadrotor
 #include <autopilot/autopilot_helper.h>
@@ -18,7 +21,7 @@
 #include "flightlib/common/quad_state.hpp"
 #include "flightlib/common/types.hpp"
 #include "flightlib/objects/quadrotor.hpp"
-#include "flightlib/objects/static_obstacle.hpp"
+#include "flightlib/objects/static_object.hpp"
 #include "flightlib/sensors/rgb_camera.hpp"
 #include "flightlib/bridges/unity_message_types.hpp"
 
@@ -43,6 +46,12 @@ private:
     // subscriber
     ros::Subscriber quadrotor_state_sub_;
     ros::Subscriber obstacle_info_sub_;
+
+    // publisher
+    ros::Publisher arm_bridge_pub_;
+	ros::Publisher start_pub_;
+	ros::Publisher go_to_pose_pub_;
+	ros::Publisher max_velocity_pub_;
 
     // main loop timer
     ros::Timer main_loop_timer_;
@@ -70,6 +79,7 @@ private:
 
     void set_unity();
     void connect_unity();
+    void start_quadrotor_bridge();
 };
 
 }  // namespace flightros

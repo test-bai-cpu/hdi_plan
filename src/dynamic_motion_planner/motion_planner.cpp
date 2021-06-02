@@ -24,8 +24,10 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh, const ros::NodeHandle &p
     this->sub_quadrotor_state_ = nh_.subscribe("hdi_plan/quadrotor_state", 1, &MotionPlanner::quadrotor_state_callback, this);
 	//this->sub_goal_point_ = nh_.subscribe("hdi_plan/goal_point", 1, &MotionPlanner::goal_point_callback, this);
     this->sub_obstacle_info_ = nh_.subscribe("hdi_plan/obstacle_info_topic", 1, &MotionPlanner::obstacle_info_callback, this);
-    this->pub_solution_path_ = nh_.advertise<geometry_msgs::PoseStamped>("command/pose", 1);
+    this->pub_solution_path_ = nh_.advertise<geometry_msgs::PoseStamped>("autopilot/pose_command", 1);
     this->sub_human_movement_ = nh_.subscribe("hdi_plan/human_movement", 1, &MotionPlanner::human_movement_callback, this);
+	this->go_to_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("autopilot/pose_command", 1);
+	this->max_velocity_pub_ = nh_.advertise<std_msgs::Float64>("autopilot/max_velocity", 1);
 }
 
 MotionPlanner::~MotionPlanner() = default;
@@ -58,10 +60,10 @@ double MotionPlanner::distance_function(const std::shared_ptr<RRTNode>& a, const
 
 void MotionPlanner::setup() {
     //Eigen::Vector3d start_position(0,0,5);
-    Eigen::Vector3d start_position(0,0,3);
+    Eigen::Vector3d start_position(1,1,3);
     this->start_ = std::make_shared<RRTNode>(start_position, 0);
     //Eigen::Vector3d goal_position(20,20,5);
-    Eigen::Vector3d goal_position(0,10,3);
+    Eigen::Vector3d goal_position(1,10,3);
     this->goal_ = std::make_shared<RRTNode>(goal_position, this->total_plan_time_);
     this->goal_->set_lmc(0);
     this->goal_->set_g_cost(0);
@@ -228,7 +230,7 @@ bool MotionPlanner::solve() {
     this->rewire_neighbors(random_node);
     this->reduce_inconsistency();
 
-    if (this->iteration_count % 50 == 1) {
+    if (this->iteration_count % 50 == 1 || this->if_environment_change) {
 		if (this->update_solution_path()) {
 			this->publish_solution_path();
 		}
@@ -253,6 +255,7 @@ void MotionPlanner::update_obstacle() {
 		}
 	}
 	if (remove_obstacle) {
+		this->if_environment_change = true;
 		this->reduce_inconsistency();
 	}
 
@@ -275,6 +278,7 @@ void MotionPlanner::update_obstacle() {
 	}*/
 
 	if (add_obstacle) {
+		this->if_environment_change = true;
 		this->propogate_descendants();
 		//this->verify_queue(v_bot);
 		this->reduce_inconsistency();
@@ -493,6 +497,7 @@ bool MotionPlanner::update_solution_path() {
         this->solution_path.push_back(intermediate_node->get_state());
         if (intermediate_node == this->goal_) {
             if_find_solution = true;
+            this->if_environment_change = false;
             break;
         }
         intermediate_node = intermediate_node->parent;
@@ -520,6 +525,18 @@ void MotionPlanner::publish_solution_path() {
     ROS_INFO("Sending solution path to the quadrotor");
     std::cout << "The command pose is: " << next_position(0) << " " << next_position(1) << " " << next_position(2) << std::endl;
     this->pub_solution_path_.publish(msg);
+}
+
+void MotionPlanner::optimize_solution_path() {
+	ros::WallTime chomp_start_time = ros::WallTime::now();
+	ROS_INFO("Found the solution path, start to optimize");
+
+	auto chomp_trajectory = std::make_shared<ChompTrajectory>(this->solution_path);
+	auto chomp = std::make_shared<Chomp>(chomp_trajectory, this->obstacle_map);
+	std::vector<Eigen::Vector3d> optimized_trajectory = chomp->get_optimized_trajectory();
+
+	double chomp_process_time = (ros::WallTime::now() - chomp_start_time).toSec();
+	std::cout << "The optimization time is: " << chomp_process_time << std::endl;
 }
 
 void MotionPlanner::rewire_neighbors(std::shared_ptr<RRTNode> random_node) {

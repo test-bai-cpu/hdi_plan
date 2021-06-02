@@ -91,7 +91,8 @@ void ChompTrajectory::fill_discretized_points() {
 Eigen::Vector3d ChompTrajectory::calculate_position_by_index(int index) {
 	// the index starts from 1
 	int interval_index = 0;
-	for (int i=0; i<this->group_number_add_.size(); i++) {
+	int group_size = static_cast<int>(this->group_number_add_.size());
+	for (int i=0; i<group_size; i++) {
 		if (index <= this->group_number_add_[i]) {
 			interval_index = i;
 			break;
@@ -104,7 +105,7 @@ Eigen::Vector3d ChompTrajectory::calculate_position_by_index(int index) {
 	if (interval_index == 0) {
 		start_index = 1;
 		end_index = this->group_number_add_[interval_index] + 1;
-	} else if (interval_index == this->group_number_add_.size()-1) {
+	} else if (interval_index == group_size-1) {
 		start_index = this->group_number_add_[interval_index-1] +1;
 		end_index = this->group_number_add_[interval_index];
 	} else {

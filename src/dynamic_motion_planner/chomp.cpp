@@ -1,4 +1,5 @@
 #include "dynamic_motion_planner/chomp.hpp"
+#include "dynamic_motion_planner/chomp.hpp"
 
 namespace hdi_plan {
 
@@ -8,6 +9,7 @@ Chomp::Chomp(const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<
 	this->obstacle_map_ = obstacle_map;
 	this->initialize();
 	this->optimize();
+	this->convert_matrix_to_trajectory_points_vector();
 }
 
 Chomp::~Chomp() = default;
@@ -59,7 +61,6 @@ void Chomp::initialize() {
 }
 
 bool Chomp::optimize() {
-	bool should_break_out = false;
 	ros::WallTime start_time = ros::WallTime::now();
 	for (this->iteration_=0; this->iteration_ < this->max_iterations_; this->iteration_++) {
 		perform_forward_kinematics();

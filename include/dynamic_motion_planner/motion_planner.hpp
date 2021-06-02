@@ -29,6 +29,7 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Point.h>
+#include <std_msgs/Float64.h>
 
 //hdi_plan
 #include "dynamic_motion_planner/node_list.hpp"
@@ -37,6 +38,7 @@
 #include "dynamic_motion_planner/RRT_node.hpp"
 #include "dynamic_motion_planner/space.hpp"
 #include "dynamic_motion_planner/chomp.hpp"
+#include "dynamic_motion_planner/chomp_trajectory.hpp"
 #include "utils/types.hpp"
 #include "generate_dynamic_scene/obstacle.hpp"
 #include "generate_dynamic_scene/human.hpp"
@@ -111,6 +113,8 @@ private:
 
     // publisher
     ros::Publisher pub_solution_path_;
+	ros::Publisher go_to_pose_pub_;
+	ros::Publisher max_velocity_pub_;
 
     // main loop
     bool solve();
@@ -155,6 +159,7 @@ private:
     std::vector<Eigen::Vector3d> solution_path;
     bool update_solution_path();
     void publish_solution_path();
+    void optimize_solution_path();
 
     // obstacle related
     void initiate_obstacles();
@@ -169,6 +174,7 @@ private:
 	std::vector<std::shared_ptr<RRTNode>> orphan_node_list;
 	void verify_orphan(std::shared_ptr<RRTNode> node);
 	bool check_if_node_in_orphan_list(const std::shared_ptr<RRTNode>& node);
+	bool if_environment_change{false};
 
 	// utils
 	void make_parent_of(std::shared_ptr<RRTNode> parent_node, std::shared_ptr<RRTNode> node);

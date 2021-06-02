@@ -20,9 +20,15 @@ StartQuadrotor::StartQuadrotor(const ros::NodeHandle &nh, const ros::NodeHandle 
 
     this->quadrotor_state_sub_ = this->nh_.subscribe("hdi_plan/quadrotor_state", 1,
                                  &StartQuadrotor::pose_callback, this);
-    this->obstacle_info_sub_ = this->nh_.subscribe("hdi_plan/obstacle_info_topic", 1, &StartQuadrotor::obstacle_callback, this);
+    this->obstacle_info_sub_ = this->nh_.subscribe("hdi_plan/obstacle_info_topic", 1,
+												   &StartQuadrotor::obstacle_callback, this);
     this->main_loop_timer_ = this->nh_.createTimer(ros::Rate(this->main_loop_freq_),
                                       &StartQuadrotor::main_loop_callback, this);
+	this->arm_bridge_pub_ = nh_.advertise<std_msgs::Bool>("bridge/arm", 1);
+	this->start_pub_ = nh_.advertise<std_msgs::Empty>("autopilot/start", 1);
+	this->go_to_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("autopilot/pose_command", 1);
+	this->max_velocity_pub_ = nh_.advertise<std_msgs::Float64>("autopilot/max_velocity", 1);
+
 
     spawn_quadrotor();
 
@@ -32,6 +38,9 @@ StartQuadrotor::StartQuadrotor(const ros::NodeHandle &nh, const ros::NodeHandle 
     set_unity();
     connect_unity();
 
+	start_quadrotor_bridge();
+
+	ros::Duration(3.0).sleep();
 }
 
 StartQuadrotor::~StartQuadrotor() {}
@@ -84,7 +93,7 @@ void StartQuadrotor::obstacle_callback(const hdi_plan::obstacle_info::ConstPtr &
 		}
 	}
 
-    std::shared_ptr<StaticObstacle> obstacle = std::make_shared<StaticObstacle>(obstacle_id, prefab_id);
+    std::shared_ptr<StaticObject> obstacle = std::make_shared<StaticObject>(obstacle_id, prefab_id);
 	if (obstacle_operation) {
         std::cout << "Add the obstacle" << std::endl;
 		obstacle->setPosition(Eigen::Vector3f((Scalar)msg->position.x, (Scalar)msg->position.y, (Scalar)msg->position.z));
@@ -146,5 +155,19 @@ bool StartQuadrotor::load_params() {
     return true;
 }
 
+void StartQuadrotor::start_quadrotor_bridge() {
+	std_msgs::Bool arm_message;
+	arm_message.data = true;
+	this->arm_bridge_pub_.publish(arm_message);
+
+	std_msgs::Empty start_message;
+	this->start_pub_.publish(start_message);
+
+	geometry_msgs::PoseStamped go_to_pose_msg;
+	go_to_pose_msg.pose.position.x = 1.0;
+	go_to_pose_msg.pose.position.y = 1.0;
+	go_to_pose_msg.pose.position.z = 1.0;
+	this->go_to_pose_pub_.publish(go_to_pose_msg);
+}
 
 }  // namespace hdi_plan
