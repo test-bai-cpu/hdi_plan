@@ -1,5 +1,4 @@
 #include "dynamic_motion_planner/chomp.hpp"
-#include "dynamic_motion_planner/chomp.hpp"
 
 namespace hdi_plan {
 
@@ -286,4 +285,9 @@ void Chomp::add_increments_to_trajectory() {
 		this->full_trajectory_->add_increments_to_trajectory(this->final_increments_.col(i), i, scale);
 	}
 }
+
+void Chomp::convert_matrix_to_trajectory_points_vector() {
+
+}
+
 }

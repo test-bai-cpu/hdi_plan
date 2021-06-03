@@ -3,6 +3,7 @@
     <arg name="debug" default="0" />
     <param name="use_sim_time" value="false"/>
 
-    <node name="generate_dynamic_scene" pkg="hdi_plan" type="generate_dynamic_scene" output="screen" >
+
+    <node name="publish_trajectory" pkg="hdi_plan" type="publish_trajectory" output="screen" >
     </node>
 </launch>

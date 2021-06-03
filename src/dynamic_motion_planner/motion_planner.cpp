@@ -152,9 +152,13 @@ void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr 
 }
 
 void MotionPlanner::obstacle_info_callback(const hdi_plan::obstacle_info::ConstPtr &msg) {
-    std::cout << "Motion Planner node: callback" << std::endl;
-	std::string obstacle_name = msg->name;
 	Obstacle_type obstacle_type = static_cast<Obstacle_type>(msg->type);
+	if (obstacle_type == hdi_plan::Obstacle_type::human) {
+		return;
+	}
+
+	std::cout << "Motion Planner node: callback" << std::endl;
+	std::string obstacle_name = msg->name;
 	bool obstacle_operation = msg->operation;
 	double obstacle_size = static_cast<double>(msg->size);
 	Eigen::Vector3d obstacle_position(msg->position.x, msg->position.y, msg->position.z);

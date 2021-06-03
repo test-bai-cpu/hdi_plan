@@ -99,6 +99,15 @@ target_link_libraries(generate_dynamic_scene
         stdc++fs
         )
 
+# node: publish trajectory to quadrotor
+cs_add_executable(publish_trajectory
+        src/publish_trajectory/publish_trajectory_to_quadrotor.cpp
+        )
+target_link_libraries(publish_trajectory
+        ${catkin_LIBRARIES}
+        stdc++fs
+        )
+
 # node: motion planner
 find_package(ompl REQUIRED)
 if (OMPL_FOUND)
