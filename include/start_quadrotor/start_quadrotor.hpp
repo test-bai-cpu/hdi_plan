@@ -79,7 +79,6 @@ private:
 
     void set_unity();
     void connect_unity();
-    void start_quadrotor_bridge();
 };
 
 }  // namespace flightros

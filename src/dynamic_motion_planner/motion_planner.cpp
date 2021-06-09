@@ -12,7 +12,7 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh, const ros::NodeHandle &p
     srand((unsigned)time(NULL));
 
     // wait until the gazebo and unity are loaded
-    ros::Duration(7.0).sleep();
+    ros::Duration(10.0).sleep();
 
     // initialization
     ROS_INFO("Initialization");
@@ -24,10 +24,11 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh, const ros::NodeHandle &p
     this->sub_quadrotor_state_ = nh_.subscribe("hdi_plan/quadrotor_state", 1, &MotionPlanner::quadrotor_state_callback, this);
 	//this->sub_goal_point_ = nh_.subscribe("hdi_plan/goal_point", 1, &MotionPlanner::goal_point_callback, this);
     this->sub_obstacle_info_ = nh_.subscribe("hdi_plan/obstacle_info_topic", 1, &MotionPlanner::obstacle_info_callback, this);
-    this->pub_solution_path_ = nh_.advertise<geometry_msgs::PoseStamped>("autopilot/pose_command", 1);
     this->sub_human_movement_ = nh_.subscribe("hdi_plan/human_movement", 1, &MotionPlanner::human_movement_callback, this);
-	this->go_to_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("autopilot/pose_command", 1);
-	this->max_velocity_pub_ = nh_.advertise<std_msgs::Float64>("autopilot/max_velocity", 1);
+	this->pub_optimized_path_ = nh_.advertise<hdi_plan::point_array>("hdi_plan/full_trajectory", 1);
+	this->pub_go_to_pose_ = nh_.advertise<geometry_msgs::PoseStamped>("autopilot/pose_command", 1);
+	this->pub_max_velocity_ = nh_.advertise<std_msgs::Float64>("autopilot/max_velocity", 1);
+	this->pub_get_new_path_ = nh_.advertise<std_msgs::Bool>("hdi_plan/get_new_path", 1);
 }
 
 MotionPlanner::~MotionPlanner() = default;
@@ -79,7 +80,7 @@ void MotionPlanner::set_to_start_position() {
     msg.pose.position.x = start_position(0);
     msg.pose.position.y = start_position(1);
     msg.pose.position.z = start_position(2);
-    this->pub_solution_path_.publish(msg);
+    this->pub_go_to_pose_.publish(msg);
 
     this->position_ready = true;
 }
@@ -139,12 +140,12 @@ double MotionPlanner::generate_random_time(const Eigen::Vector3d& state) {
 }
 
 void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg) {
-    //ros::Duration(0.1).sleep();
+    ros::Duration(0.1).sleep();
     Eigen::Vector3d quadrotor_state(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
     this->quadrotor_state_ = quadrotor_state;
     this->quadrotor_ = std::make_shared<RRTNode>(quadrotor_state);
     if (this->compute_cost(quadrotor_state, this->goal_->get_state()) > 0.1) {
-        //this->solve();
+        this->solve();
     } else {
         ROS_INFO("Already reach the goal. Will exit.");
         this->sub_quadrotor_state_.shutdown();
@@ -236,7 +237,7 @@ bool MotionPlanner::solve() {
 
     if (this->iteration_count % 50 == 1 || this->if_environment_change) {
 		if (this->update_solution_path()) {
-			this->publish_solution_path();
+			this->optimize_solution_path();
 		}
     }
 
@@ -510,25 +511,28 @@ bool MotionPlanner::update_solution_path() {
 }
 
 void MotionPlanner::publish_solution_path() {
-    ROS_INFO("Found the solution path");
-    Eigen::Vector3d next_position;
-    //Eigen::Vector3d next_position = this->solution_path.at(1);
-    for (auto it = this->solution_path.begin(); it != this->solution_path.end(); ++it) {
-        next_position = *it;
-        std::cout << "The solution path is: " << next_position(0) << " " << next_position(1) << " " << next_position(2) << std::endl;
-        if (this->compute_cost(next_position, this->quadrotor_->get_state()) > 0.1) {
-            break;
-        }
-    }
+	/*
+	ROS_INFO("Found the solution path");
 
-    geometry_msgs::PoseStamped msg;
-    msg.pose.position.x = next_position(0);
-    msg.pose.position.y = next_position(1);
-    msg.pose.position.z = next_position(2);
+	Eigen::Vector3d next_position;
+	//Eigen::Vector3d next_position = this->solution_path.at(1);
+	for (auto it = this->solution_path.begin(); it != this->solution_path.end(); ++it) {
+		next_position = *it;
+		std::cout << "The solution path is: " << next_position(0) << " " << next_position(1) << " " << next_position(2) << std::endl;
+		if (this->compute_cost(next_position, this->quadrotor_->get_state()) > 0.1) {
+			break;
+		}
+	}
 
-    ROS_INFO("Sending solution path to the quadrotor");
-    std::cout << "The command pose is: " << next_position(0) << " " << next_position(1) << " " << next_position(2) << std::endl;
-    this->pub_solution_path_.publish(msg);
+	geometry_msgs::PoseStamped msg;
+	msg.pose.position.x = next_position(0);
+	msg.pose.position.y = next_position(1);
+	msg.pose.position.z = next_position(2);
+
+	ROS_INFO("Sending solution path to the quadrotor");
+	std::cout << "The command pose is: " << next_position(0) << " " << next_position(1) << " " << next_position(2) << std::endl;
+	this->pub_solution_path_.publish(msg);
+*/
 }
 
 void MotionPlanner::optimize_solution_path() {
@@ -541,6 +545,24 @@ void MotionPlanner::optimize_solution_path() {
 
 	double chomp_process_time = (ros::WallTime::now() - chomp_start_time).toSec();
 	std::cout << "The optimization time is: " << chomp_process_time << std::endl;
+
+	hdi_plan::point_array trajectory_msg;
+	int trajectory_size = optimized_trajectory.size();
+	geometry_msgs::Point trajectory_point;
+	for (int i = 0; i < trajectory_size; i++) {
+		Eigen::Vector3d point = optimized_trajectory.at(i);
+		trajectory_point.x = point(0);
+		trajectory_point.y = point(1);
+		trajectory_point.z = point(2);
+		trajectory_msg.points.push_back(trajectory_point);
+		ROS_INFO("publish trajectory is: x=%.2f, y=%.2f, z=%.2f", point(0), point(1), point(2));
+	}
+
+	std_msgs::Bool get_new_path_msg;
+	get_new_path_msg.data = true;
+	this->pub_get_new_path_.publish(get_new_path_msg);
+	
+	this->pub_optimized_path_.publish(trajectory_msg);
 }
 
 void MotionPlanner::rewire_neighbors(std::shared_ptr<RRTNode> random_node) {

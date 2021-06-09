@@ -66,6 +66,24 @@ target_link_libraries(start_quadrotor_node
         zmqpp
 )
 
+# node: publish trajectory to quadrotor
+cs_add_library(publish_trajectory
+        src/publish_trajectory/publish_trajectory_to_quadrotor.cpp
+        )
+cs_add_executable(publish_trajectory_node
+        src/publish_trajectory/publish_trajectory_to_quadrotor_node.cpp
+        )
+target_link_libraries(publish_trajectory
+        ${catkin_LIBRARIES}
+        stdc++fs
+        )
+target_link_libraries(publish_trajectory_node
+        publish_trajectory
+        ${catkin_LIBRARIES}
+        ${OpenCV_LIBRARIES}
+        stdc++fs
+        )
+
 # node: clock server, not used now
 cs_add_executable(clock_server
         src/clock_server/clock_server.cpp
@@ -83,6 +101,9 @@ target_link_libraries(clock_server
 cs_add_library(generate_dynamic_scene_dependencies
         src/generate_dynamic_scene/obstacle.cpp
         src/generate_dynamic_scene/human.cpp
+        src/dynamic_motion_planner/chomp.cpp
+        src/dynamic_motion_planner/chomp_trajectory.cpp
+        src/dynamic_motion_planner/chomp_cost.cpp
         )
 
 cs_add_executable(generate_dynamic_scene
@@ -95,15 +116,6 @@ target_link_libraries(generate_dynamic_scene_dependencies
         )
 target_link_libraries(generate_dynamic_scene
         generate_dynamic_scene_dependencies
-        ${catkin_LIBRARIES}
-        stdc++fs
-        )
-
-# node: publish trajectory to quadrotor
-cs_add_executable(publish_trajectory
-        src/publish_trajectory/publish_trajectory_to_quadrotor.cpp
-        )
-target_link_libraries(publish_trajectory
         ${catkin_LIBRARIES}
         stdc++fs
         )

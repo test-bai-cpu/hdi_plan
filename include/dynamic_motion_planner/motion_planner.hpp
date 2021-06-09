@@ -30,6 +30,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Point.h>
 #include <std_msgs/Float64.h>
+#include <std_msgs/Bool.h>
 
 //hdi_plan
 #include "dynamic_motion_planner/node_list.hpp"
@@ -43,7 +44,7 @@
 #include "generate_dynamic_scene/obstacle.hpp"
 #include "generate_dynamic_scene/human.hpp"
 #include <hdi_plan/obstacle_info.h>
-
+#include <hdi_plan/point_array.h>
 
 namespace hdi_plan {
 
@@ -112,9 +113,10 @@ private:
 	//void human_movement_callback_region_version(const geometry_msgs::Point::ConstPtr &msg);
 
     // publisher
-    ros::Publisher pub_solution_path_;
-	ros::Publisher go_to_pose_pub_;
-	ros::Publisher max_velocity_pub_;
+    ros::Publisher pub_optimized_path_;
+	ros::Publisher pub_go_to_pose_;
+	ros::Publisher pub_max_velocity_;
+    ros::Publisher pub_get_new_path_;
 
     // main loop
     bool solve();

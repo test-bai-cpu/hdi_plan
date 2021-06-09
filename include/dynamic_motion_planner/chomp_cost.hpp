@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ros/ros.h>
+
 #include <memory>
 
 #include <Eigen/Core>

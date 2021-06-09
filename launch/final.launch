@@ -99,11 +99,6 @@
             </node>
         </group>
 
-        <node pkg="flightros" type="flight_pilot_node" name="flight_pilot_node" output="screen">
-            <rosparam file="$(find flightros)/params/default.yaml" />
-            <remap from="flight_pilot/state_estimate" to="ground_truth/odometry" />
-        </node>
-
         <node pkg="manual_flight_assistant" type="manual_flight_assistant"
               name="manual_flight_assistant" output="screen">
             <rosparam file="$(find rpg_rotors_interface)/parameters/manual_flight_assistant.yaml"/>
@@ -121,7 +116,8 @@
         <node name="generate_dynamic_scene" pkg="hdi_plan" type="generate_dynamic_scene" output="screen" >
         </node>
 
-        <node name="publish_trajectory" pkg="hdi_plan" type="publish_trajectory" output="screen" >
+        <node name="publish_trajectory_node" pkg="hdi_plan" type="publish_trajectory_node" output="screen">
+            <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
         </node>
 
     </group>

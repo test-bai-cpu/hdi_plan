@@ -4,6 +4,7 @@ namespace hdi_plan {
 
 Chomp::Chomp(const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<std::string,
 			 std::shared_ptr<Obstacle>>& obstacle_map) {
+	ROS_INFO("Start in the chomp");
 	this->full_trajectory_ = trajectory;
 	this->obstacle_map_ = obstacle_map;
 	this->initialize();
@@ -14,12 +15,14 @@ Chomp::Chomp(const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<
 Chomp::~Chomp() = default;
 
 void Chomp::initialize() {
+	ROS_INFO("Chomp: Initialize");
 	this->num_vars_all_ = this->full_trajectory_->get_num_points_diff(); // actual points + 10
 	this->num_vars_free_ = this->full_trajectory_->get_num_points_free(); // actual points - 2
 	this->num_vars_origin_ = this->full_trajectory_->get_num_points(); // actual points
 	this->free_vars_start_ = this->full_trajectory_->get_start_index();
 	this->free_vars_end_ = this->full_trajectory_->get_end_index();
 
+	ROS_INFO("Chomp: Initialize 1");
 	// get joint cost
 	std::vector<double> derivative_costs(3);
 	double joint_cost = 1.0;
@@ -28,22 +31,25 @@ void Chomp::initialize() {
 	derivative_costs[2] = joint_cost * this->smoothness_cost_jerk_;
 	this->joint_costs_.reserve(this->num_joints_);
 	double max_cost_scale = 0.0;
+
+	ROS_INFO("Chomp: Initialize 2");
 	for (int i = 0; i < this->num_joints_; i++) {
 		this->joint_costs_.push_back(std::make_shared<ChompCost>(this->full_trajectory_, derivative_costs, this->ridge_factor_));
 		double cost_scale = this->joint_costs_[i]->getMaxQuadCostInvValue();
 		if (max_cost_scale < cost_scale) max_cost_scale = cost_scale;
 	}
-
+	ROS_INFO("Chomp: Initialize 3");
 	for (int i = 0; i < this->num_joints_; i++) {
 		this->joint_costs_[i]->scale(max_cost_scale);
 	}
-
+	ROS_INFO("Chomp: Initialize 4");
 	// allocate memory for matrices:
 	this->smoothness_increments_ = Eigen::MatrixXd::Zero(this->num_vars_free_, this->num_joints_);
 	this->collision_increments_ = Eigen::MatrixXd::Zero(this->num_vars_free_, this->num_joints_);
 	this->final_increments_ = Eigen::MatrixXd::Zero(this->num_vars_free_, this->num_joints_);
 	this->smoothness_derivative_ = Eigen::VectorXd::Zero(this->num_vars_all_);
 
+	this->optimized_trajectory_.resize(this->num_vars_origin_);
 	this->collision_point_pos_.resize(this->num_vars_all_);
 	this->collision_point_vel_.resize(this->num_vars_all_);
 	this->collision_point_acc_.resize(this->num_vars_all_);
@@ -60,8 +66,10 @@ void Chomp::initialize() {
 }
 
 bool Chomp::optimize() {
+	ROS_INFO("Chomp: Optimize()");
 	ros::WallTime start_time = ros::WallTime::now();
 	for (this->iteration_=0; this->iteration_ < this->max_iterations_; this->iteration_++) {
+		std::cout << "The iteration number is: " << this->iteration_ << std::endl;
 		perform_forward_kinematics();
 		double c_cost = this->get_collision_cost();
 		double s_cost = this->get_smoothness_cost();
@@ -287,7 +295,15 @@ void Chomp::add_increments_to_trajectory() {
 }
 
 void Chomp::convert_matrix_to_trajectory_points_vector() {
+	ROS_INFO("Chomp: conver to optimized trajectory");
+	int start_extra = this->full_trajectory_->get_start_extra();
 
+	for (int i = 0; i < this->num_vars_origin_; i++) {
+		Eigen::Vector3d position(this->best_trajectory_(i + start_extra, 0),
+								 this->best_trajectory_(i + start_extra, 1),
+								 this->best_trajectory_(i + start_extra, 2));
+		this->optimized_trajectory_[i] = position;
+	}
 }
 
 }

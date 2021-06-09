@@ -7,7 +7,7 @@ StartQuadrotor::StartQuadrotor(const ros::NodeHandle &nh, const ros::NodeHandle 
     pnh_(pnh),
     scene_id_(UnityScene::INDUSTRIAL),
     unity_ready_(false),
-    unity_render_(false),
+    unity_render_(true),
     main_loop_freq_(50.0) {
 
     // load parameters
@@ -37,10 +37,6 @@ StartQuadrotor::StartQuadrotor(const ros::NodeHandle &nh, const ros::NodeHandle 
 
     set_unity();
     connect_unity();
-
-	start_quadrotor_bridge();
-
-	ros::Duration(3.0).sleep();
 }
 
 StartQuadrotor::~StartQuadrotor() {}
@@ -131,10 +127,9 @@ void StartQuadrotor::pose_callback(const nav_msgs::Odometry::ConstPtr &msg) {
 }
 
 void StartQuadrotor::set_unity() {
-    if (!this->unity_render_ && this->unity_bridge_ptr_ == nullptr) {
+    if (this->unity_render_ && this->unity_bridge_ptr_ == nullptr) {
         this->unity_bridge_ptr_ = UnityBridge::getInstance();
         this->unity_bridge_ptr_->addQuadrotor(this->quad_ptr_);
-        this->unity_render_ = true;
         ROS_INFO("[%s] Unity Bridge is created.", this->pnh_.getNamespace().c_str());
     }
 }
@@ -152,22 +147,8 @@ void StartQuadrotor::main_loop_callback(const ros::TimerEvent &event) {
 bool StartQuadrotor::load_params() {
     // load parameters
     quadrotor_common::getParam("main_loop_freq", this->main_loop_freq_, this->pnh_);
+	quadrotor_common::getParam("unity_render", this->unity_render_, this->pnh_);
     return true;
-}
-
-void StartQuadrotor::start_quadrotor_bridge() {
-	std_msgs::Bool arm_message;
-	arm_message.data = true;
-	this->arm_bridge_pub_.publish(arm_message);
-
-	std_msgs::Empty start_message;
-	this->start_pub_.publish(start_message);
-
-	geometry_msgs::PoseStamped go_to_pose_msg;
-	go_to_pose_msg.pose.position.x = 1.0;
-	go_to_pose_msg.pose.position.y = 1.0;
-	go_to_pose_msg.pose.position.z = 1.0;
-	this->go_to_pose_pub_.publish(go_to_pose_msg);
 }
 
 }  // namespace hdi_plan
