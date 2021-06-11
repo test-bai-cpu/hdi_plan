@@ -1,6 +1,9 @@
 #pragma once
 
+#include <ros/ros.h>
+
 #include <Eigen/Dense>
+#include <iostream>
 #include <memory>
 #include <limits>
 #include <ompl/datastructures/BinaryHeap.h>
@@ -44,16 +47,24 @@ public:
         return this->lmc_;
     };
 
-    void set_lmc(double lmc) {
-        this->lmc_ = lmc;
+    void set_lmc(double lmc, bool if_inf = false) {
+        if (if_inf) {
+            this->lmc_ = std::numeric_limits<double>::max();
+        } else {
+            this->lmc_ = lmc;
+        }
     };
 
     double get_g_cost() const {
         return this->g_cost_;
     };
 
-    void set_g_cost(double g_cost) {
-        this->g_cost_ = g_cost;
+    void set_g_cost(double g_cost, bool if_inf = false) {
+        if (if_inf) {
+            this->g_cost_ = std::numeric_limits<double>::max();
+        } else {
+            this->g_cost_ = g_cost;
+        }
     };
 
 	double get_time() const {

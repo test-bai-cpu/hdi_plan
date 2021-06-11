@@ -96,8 +96,8 @@ private:
 	// parameters
 	double planning_time_limit_{6.0};
 	int max_iterations_{50};
-	int max_iterations_after_collision_free_{5};
-	double smoothness_cost_weight_{0.1};
+	int max_iterations_after_collision_free_{15};
+	double smoothness_cost_weight_{1.0};
 	double obstacle_cost_weight_{1.0};
 	double learning_rate_{0.01};
 	double smoothness_cost_velocity_{0.0};

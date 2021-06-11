@@ -9,6 +9,7 @@
 
 
 //test chomp
+/*
 #include <stack>
 #include <queue>
 #include <vector>
@@ -33,7 +34,10 @@
 #include "generate_dynamic_scene/human.hpp"
 #include <hdi_plan/point_array.h>
 
-/*
+#include <iostream>
+#include <fstream>*/
+
+
 double get_distance(const Eigen::Vector2d &point1, const Eigen::Vector2d &point2) {
 	return static_cast<double>(std::sqrt((point1 - point2).squaredNorm()));
 }
@@ -50,7 +54,7 @@ hdi_plan::obstacle_info get_obstacle_message(bool operation, double position_x =
 
 	return obstacle_msg;
 }
-*/
+
 int main(int argc, char **argv) {
 	ros::init(argc, argv, "generate_obstacle");
 	ros::NodeHandle nh;
@@ -58,12 +62,12 @@ int main(int argc, char **argv) {
 	//ros::Publisher pub_get_new_path_ = nh_.advertise<std_msgs::Bool>("hdi_plan/get_new_path", 1);
 	//ros::Publisher pub_optimized_path_ = nh_.advertise<hdi_plan::point_array>("hdi_plan/full_trajectory", 1);
 
-	/*
+
 	ros::Publisher human_movement_pub = nh.advertise<geometry_msgs::Point>("hdi_plan/human_movement", 1);
 	ros::Publisher update_human_obstacle_pub = nh.advertise<hdi_plan::obstacle_info>("hdi_plan/obstacle_info_topic", 1);
 
 	// wait until human movement start
-	ros::Duration(3.0).sleep();
+	ros::Duration(20.0).sleep();
 
 	ros::Rate loop_rate(1);
 	double period = static_cast<double>(loop_rate.expectedCycleTime().toSec());
@@ -74,14 +78,14 @@ int main(int argc, char **argv) {
 	double velocity = 1;
 
 	int count = 0;
-
+	ROS_INFO("Generate Obstacle: Start to spawn a human.");
 	while (get_distance(current_point, goal_point) > 0.5 * period * velocity) {
 		if (count > 0) update_human_obstacle_pub.publish(get_obstacle_message(false));
 
 		current_point(0) = (goal_point(0) - start_point(0)) * (velocity * count * period) / distance + start_point(0);
 		current_point(1) = (goal_point(1) - start_point(1)) * (velocity * count * period) / distance + start_point(1);
 
-		std::cout << "The human current position is, x: " << current_point(0) << " y: " << current_point(1) << std::endl;
+		//std::cout << "The human current position is, x: " << current_point(0) << " y: " << current_point(1) << std::endl;
 
 		update_human_obstacle_pub.publish(get_obstacle_message(true,current_point(0),current_point(1)));
 		geometry_msgs::Point msg;
@@ -94,10 +98,22 @@ int main(int argc, char **argv) {
 		loop_rate.sleep();
 		count += 1;
 	}
-	*/
 
+/*
 	std::vector<Eigen::Vector3d> solution_path;
-	solution_path.resize(10);
+	solution_path.resize(5);
+	Eigen::Vector3d point_1(0.0, 1.0, 1.0);
+	solution_path[0] = point_1;
+	Eigen::Vector3d point_2(1.0, 2.0, 1.0);
+	solution_path[1] = point_2;
+	Eigen::Vector3d point_3(2.0, 0.0, 1.0);
+	solution_path[2] = point_3;
+	Eigen::Vector3d point_4(3.0, 2.0, 1.0);
+	solution_path[3] = point_4;
+	Eigen::Vector3d point_5(4.0, 1.0, 1.0);
+	solution_path[4] = point_5;
+
+
 	for (int i=0;i<10;i++) {
 		Eigen::Vector3d s_point(1.0, i+1, 1.0);
 		solution_path[i] = s_point;
@@ -108,7 +124,7 @@ int main(int argc, char **argv) {
 	std::string obstacle_name = "cube1";
 	bool obstacle_operation = true;
 	double obstacle_size = 1;
-	Eigen::Vector3d obstacle_position(0, 5, 0);
+	Eigen::Vector3d obstacle_position(100, 100, 100);
 	auto obstacle = std::make_shared<hdi_plan::Obstacle>(obstacle_name, hdi_plan::Obstacle_type::cube, obstacle_operation, obstacle_size, obstacle_position);
 	obstacle_map[obstacle_name] = obstacle;
 
@@ -121,12 +137,17 @@ int main(int argc, char **argv) {
 	std::cout << "The optimization time is: " << chomp_process_time << std::endl;
 
 	int trajectory_size = optimized_trajectory.size();
+	std::ofstream data_file ("data.txt");
 	for (int i = 0; i < trajectory_size; i++) {
 		Eigen::Vector3d point = optimized_trajectory.at(i);
-		ROS_INFO("the optimized trajectory is: x=%.2f, y=%.2f, z=%.2f", point(0), point(1), point(2));
+		//ROS_INFO("the optimized trajectory is: x=%.2f, y=%.2f, z=%.2f", point(0), point(1), point(2));
+		//std::cout << point(0) << " " << point(1) << std::endl;
+		data_file << point(0) << " " << point(1) << "\n";
+	}
+	if (data_file.is_open()) {
+		data_file.close();
 	}
 
-	/*
 	hdi_plan::point_array trajectory_msg;
 	int trajectory_size = optimized_trajectory.size();
 	geometry_msgs::Point trajectory_point;

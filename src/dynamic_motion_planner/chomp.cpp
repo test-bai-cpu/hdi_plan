@@ -22,7 +22,6 @@ void Chomp::initialize() {
 	this->free_vars_start_ = this->full_trajectory_->get_start_index();
 	this->free_vars_end_ = this->full_trajectory_->get_end_index();
 
-	ROS_INFO("Chomp: Initialize 1");
 	// get joint cost
 	std::vector<double> derivative_costs(3);
 	double joint_cost = 1.0;
@@ -32,17 +31,16 @@ void Chomp::initialize() {
 	this->joint_costs_.reserve(this->num_joints_);
 	double max_cost_scale = 0.0;
 
-	ROS_INFO("Chomp: Initialize 2");
 	for (int i = 0; i < this->num_joints_; i++) {
 		this->joint_costs_.push_back(std::make_shared<ChompCost>(this->full_trajectory_, derivative_costs, this->ridge_factor_));
 		double cost_scale = this->joint_costs_[i]->getMaxQuadCostInvValue();
 		if (max_cost_scale < cost_scale) max_cost_scale = cost_scale;
 	}
-	ROS_INFO("Chomp: Initialize 3");
+
 	for (int i = 0; i < this->num_joints_; i++) {
 		this->joint_costs_[i]->scale(max_cost_scale);
 	}
-	ROS_INFO("Chomp: Initialize 4");
+
 	// allocate memory for matrices:
 	this->smoothness_increments_ = Eigen::MatrixXd::Zero(this->num_vars_free_, this->num_joints_);
 	this->collision_increments_ = Eigen::MatrixXd::Zero(this->num_vars_free_, this->num_joints_);
@@ -295,7 +293,7 @@ void Chomp::add_increments_to_trajectory() {
 }
 
 void Chomp::convert_matrix_to_trajectory_points_vector() {
-	ROS_INFO("Chomp: conver to optimized trajectory");
+	ROS_INFO("Chomp: convert to optimized trajectory");
 	int start_extra = this->full_trajectory_->get_start_extra();
 
 	for (int i = 0; i < this->num_vars_origin_; i++) {

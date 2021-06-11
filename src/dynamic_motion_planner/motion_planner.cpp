@@ -12,7 +12,7 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh, const ros::NodeHandle &p
     srand((unsigned)time(NULL));
 
     // wait until the gazebo and unity are loaded
-    ros::Duration(10.0).sleep();
+    ros::Duration(15.0).sleep();
 
     // initialization
     ROS_INFO("Initialization");
@@ -61,10 +61,10 @@ double MotionPlanner::distance_function(const std::shared_ptr<RRTNode>& a, const
 
 void MotionPlanner::setup() {
     //Eigen::Vector3d start_position(0,0,5);
-    Eigen::Vector3d start_position(1,1,3);
+    Eigen::Vector3d start_position(1,1,1);
     this->start_ = std::make_shared<RRTNode>(start_position, 0);
     //Eigen::Vector3d goal_position(20,20,5);
-    Eigen::Vector3d goal_position(1,10,3);
+    Eigen::Vector3d goal_position(1,10,1);
     this->goal_ = std::make_shared<RRTNode>(goal_position, this->total_plan_time_);
     this->goal_->set_lmc(0);
     this->goal_->set_g_cost(0);
@@ -453,15 +453,15 @@ void MotionPlanner::propogate_descendants() {
 			if (this->check_if_node_in_orphan_list(neighbor)) {
 				continue;
 			}
-			neighbor->set_g_cost(inf);
+			neighbor->set_g_cost(inf, true);
 			this->verify_queue(neighbor);
 		}
 	}
 
 	for (auto it = this->orphan_node_list.begin(); it != this->orphan_node_list.end(); ++it) {
 		std::shared_ptr<RRTNode> orphan_node_3 = *it;
-		orphan_node_3->set_g_cost(inf);
-		orphan_node_3->set_lmc(inf);
+		orphan_node_3->set_g_cost(inf, true);
+		orphan_node_3->set_lmc(inf, true);
 		if (orphan_node_3->parent != nullptr) {
 			orphan_node_3->parent->children.erase(std::remove(orphan_node_3->parent->children.begin(), orphan_node_3->parent->children.end(), orphan_node_3), orphan_node_3->parent->children.end());
 			orphan_node_3->parent = nullptr;
@@ -717,7 +717,10 @@ bool MotionPlanner::edge_in_free_space_check(const std::shared_ptr<RRTNode>& nod
 }
 
 bool MotionPlanner::check_if_edge_collide_human(const std::shared_ptr<RRTNode>& node1, const std::shared_ptr<RRTNode>& node2) {
-	bool result = (this->human_->check_if_node_inside_human(node1)) || (this->human_->check_if_node_inside_human(node2));
+	bool result = true;
+	if (node1 && this->human_->check_if_node_inside_human(node1)) result = false;
+	if (node2 && this->human_->check_if_node_inside_human(node2)) result = false;
+	//bool result = (this->human_->check_if_node_inside_human(node1)) || (this->human_->check_if_node_inside_human(node2));
 	return result;
 }
 

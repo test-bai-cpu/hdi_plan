@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ros/ros.h>
+
 #include <Eigen/Dense>
 #include <queue>
 #include <memory>

@@ -16,7 +16,7 @@ PublishTrajectory::PublishTrajectory(const ros::NodeHandle &nh, const ros::NodeH
 
 	quadrotor_state_sub_ = nh_.subscribe("hdi_plan/quadrotor_state", 1, &PublishTrajectory::quadrotor_state_callback, this);
 
-	ros::Duration(8.0).sleep();
+	ros::Duration(5.0).sleep();
 	start_quadrotor_bridge();
 }
 
@@ -53,12 +53,19 @@ void PublishTrajectory::trajectory_callback(const hdi_plan::point_array::ConstPt
 	ROS_INFO("In the trajectory callback");
 	int trajectory_size = msg->points.size();
 	this->if_get_new_path_ = false;
+
+	geometry_msgs::PoseStamped go_to_pose_msg;
+
 	for (int i = 0; i < trajectory_size; i++) {
 		if (this->if_get_new_path_) {
 			ROS_INFO("Now break the previous callback");
 			break;
 		}
-		ros::Duration(0.5).sleep();
+		ros::Duration(0.1).sleep();
+		go_to_pose_msg.pose.position.x = msg->points[i].x;
+		go_to_pose_msg.pose.position.y = msg->points[i].y;
+		go_to_pose_msg.pose.position.z = msg->points[i].z;
+		this->go_to_pose_pub_.publish(go_to_pose_msg);
 		//ROS_INFO("Show trajectory is: x=%.2f, y=%.2f, z=%.2f", msg->points[i].x, msg->points[i].y, msg->points[i].z);
 	}
 }
