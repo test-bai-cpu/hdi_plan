@@ -8,36 +8,6 @@
 #include "generate_dynamic_scene/obstacle.hpp"
 
 
-//test chomp
-/*
-#include <stack>
-#include <queue>
-#include <vector>
-#include <memory>
-#include <cmath>
-#include <limits>
-#include <cstdlib>
-#include <time.h>
-#include <string>
-#include <map>
-#include <queue>
-#include <algorithm>
-
-#include <nav_msgs/Odometry.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <std_msgs/Float64.h>
-#include <std_msgs/Bool.h>
-
-#include "dynamic_motion_planner/chomp_trajectory.hpp"
-#include "dynamic_motion_planner/chomp.hpp"
-
-#include "generate_dynamic_scene/human.hpp"
-#include <hdi_plan/point_array.h>
-
-#include <iostream>
-#include <fstream>*/
-
-
 double get_distance(const Eigen::Vector2d &point1, const Eigen::Vector2d &point2) {
 	return static_cast<double>(std::sqrt((point1 - point2).squaredNorm()));
 }
@@ -55,13 +25,10 @@ hdi_plan::obstacle_info get_obstacle_message(bool operation, double position_x =
 	return obstacle_msg;
 }
 
+// This node for publish the human position for avoiding collision and rendering human in Unity scene
 int main(int argc, char **argv) {
 	ros::init(argc, argv, "generate_obstacle");
 	ros::NodeHandle nh;
-
-	//ros::Publisher pub_get_new_path_ = nh_.advertise<std_msgs::Bool>("hdi_plan/get_new_path", 1);
-	//ros::Publisher pub_optimized_path_ = nh_.advertise<hdi_plan::point_array>("hdi_plan/full_trajectory", 1);
-
 
 	ros::Publisher human_movement_pub = nh.advertise<geometry_msgs::Point>("hdi_plan/human_movement", 1);
 	ros::Publisher update_human_obstacle_pub = nh.advertise<hdi_plan::obstacle_info>("hdi_plan/obstacle_info_topic", 1);
@@ -99,7 +66,18 @@ int main(int argc, char **argv) {
 		count += 1;
 	}
 
+	return 0;
+}
+
 /*
+int main(int argc, char **argv) {
+	ros::init(argc, argv, "generate_obstacle");
+	ros::NodeHandle nh;
+
+	//ros::Publisher pub_get_new_path_ = nh.advertise<std_msgs::Bool>("hdi_plan/get_new_path", 1);
+	ros::Publisher pub_optimized_path_ = nh.advertise<hdi_plan::point_array>("hdi_plan/full_trajectory", 1);
+	ros::Rate loop_rate(10);
+	ROS_INFO("test1");
 	std::vector<Eigen::Vector3d> solution_path;
 	solution_path.resize(5);
 	Eigen::Vector3d point_1(0.0, 1.0, 1.0);
@@ -119,7 +97,7 @@ int main(int argc, char **argv) {
 		solution_path[i] = s_point;
 	}
 
-	
+ /*
 	std::map<std::string, std::shared_ptr<hdi_plan::Obstacle>> obstacle_map;
 	std::string obstacle_name = "cube1";
 	bool obstacle_operation = true;
@@ -148,24 +126,149 @@ int main(int argc, char **argv) {
 		data_file.close();
 	}
 
+	int trajectory_size = solution_path.size();
+
 	hdi_plan::point_array trajectory_msg;
-	int trajectory_size = optimized_trajectory.size();
 	geometry_msgs::Point trajectory_point;
 	for (int i = 0; i < trajectory_size; i++) {
-		Eigen::Vector3d point = optimized_trajectory.at(i);
+		Eigen::Vector3d point = solution_path.at(i);
 		trajectory_point.x = point(0);
 		trajectory_point.y = point(1);
 		trajectory_point.z = point(2);
 		trajectory_msg.points.push_back(trajectory_point);
-		ROS_INFO("the optimized trajectory is: x=%.2f, y=%.2f, z=%.2f", point(0), point(1), point(2));
+		//ROS_INFO("the optimized trajectory is: x=%.2f, y=%.2f, z=%.2f", point(0), point(1), point(2));
 	}
 
-	std_msgs::Bool get_new_path_msg;
-	get_new_path_msg.data = true;
-	pub_get_new_path_.publish(get_new_path_msg);
-	
-	pub_optimized_path_.publish(trajectory_msg);*/
+	//std_msgs::Bool get_new_path_msg;
+	//get_new_path_msg.data = true;
+	//pub_get_new_path_.publish(get_new_path_msg);
+
+	ROS_INFO("Publish the path now1");
+
+	while (ros::ok()) {
+		ROS_INFO("Start publish 1");
+		ros::Duration(1.0).sleep();
+		ROS_INFO("Start publish 2");
+		pub_optimized_path_.publish(trajectory_msg);
+		ROS_INFO("Start publish 3");
+		ros::spinOnce();
+		loop_rate.sleep();
+	}
+
 
 
 	return 0;
 }
+*/
+
+/*
+#include <Eigen/Dense>
+
+#include <ros/ros.h>
+#include <geometry_msgs/Point.h>
+
+#include "utils/types.hpp"
+#include <hdi_plan/obstacle_info.h>
+#include "generate_dynamic_scene/obstacle.hpp"
+
+
+//test chomp
+
+#include <stack>
+#include <queue>
+#include <vector>
+#include <memory>
+#include <cmath>
+#include <limits>
+#include <cstdlib>
+#include <time.h>
+#include <string>
+#include <map>
+#include <queue>
+#include <algorithm>
+
+#include <nav_msgs/Odometry.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <std_msgs/Float64.h>
+#include <std_msgs/Bool.h>
+
+#include "dynamic_motion_planner/chomp_trajectory.hpp"
+#include "dynamic_motion_planner/chomp.hpp"
+
+#include "generate_dynamic_scene/human.hpp"
+#include <hdi_plan/point_array.h>
+
+#include <iostream>
+#include <fstream>
+
+int main(int argc, char **argv) {
+	ros::init(argc, argv, "generate_obstacle");
+	ros::NodeHandle nh;
+
+	//ros::Publisher pub_get_new_path_ = nh_.advertise<std_msgs::Bool>("hdi_plan/get_new_path", 1);
+	//ros::Publisher pub_optimized_path_ = nh_.advertise<hdi_plan::point_array>("hdi_plan/full_trajectory", 1);
+
+	std::vector<Eigen::Vector3d> solution_path;
+	solution_path.resize(11);
+	Eigen::Vector3d point_1(0.0, 4.0, 1.0);
+	solution_path[0] = point_1;
+	Eigen::Vector3d point_2(1.0, 4.0, 1.0);
+	solution_path[1] = point_2;
+	Eigen::Vector3d point_3(2.0, 4.0, 1.0);
+	solution_path[2] = point_3;
+	Eigen::Vector3d point_4(3.0, 4.0, 1.0);
+	solution_path[3] = point_4;
+	Eigen::Vector3d point_5(4.0, 4.0, 1.0);
+
+	solution_path[4] = point_5;
+	Eigen::Vector3d point_6(5.0, 4.0, 1.0);
+	solution_path[5] = point_6;
+	Eigen::Vector3d point_7(6.0, 4.0, 1.0);
+	solution_path[6] = point_7;
+	Eigen::Vector3d point_8(7.0, 4.0, 1.0);
+	solution_path[7] = point_8;
+	Eigen::Vector3d point_9(8.0, 4.0, 1.0);
+	solution_path[8] = point_9;
+	Eigen::Vector3d point_10(9.0, 4.0, 1.0);
+	solution_path[9] = point_10;
+	Eigen::Vector3d point_11(10.0, 4.0, 1.0);
+	solution_path[10] = point_11;
+
+
+
+	std::map<std::string, std::shared_ptr<hdi_plan::Obstacle>> obstacle_map;
+	std::string obstacle_name = "cube1";
+	bool obstacle_operation = true;
+	double obstacle_size = 0.5;
+	Eigen::Vector3d obstacle_position(4.0, 4.0, 1.0);
+	//Eigen::Vector3d obstacle_position(100.0, 100.0, 100);
+	auto obstacle = std::make_shared<hdi_plan::Obstacle>(obstacle_name, hdi_plan::Obstacle_type::cube, obstacle_operation, obstacle_size, obstacle_position);
+	obstacle_map[obstacle_name] = obstacle;
+
+	ros::WallTime chomp_start_time = ros::WallTime::now();
+	auto chomp_trajectory = std::make_shared<hdi_plan::ChompTrajectory>(solution_path);
+	auto chomp = std::make_shared<hdi_plan::Chomp>(chomp_trajectory, obstacle_map);
+	std::vector<Eigen::Vector3d> optimized_trajectory = chomp->get_optimized_trajectory();
+
+	double chomp_process_time = (ros::WallTime::now() - chomp_start_time).toSec();
+	std::cout << "The optimization time is: " << chomp_process_time << std::endl;
+
+	int trajectory_size = optimized_trajectory.size();
+	std::ofstream data_file ("data.txt");
+	for (int i = 0; i < trajectory_size; i++) {
+		Eigen::Vector3d point = optimized_trajectory.at(i);
+		//ROS_INFO("the optimized trajectory is: x=%.2f, y=%.2f, z=%.2f", point(0), point(1), point(2));
+		//std::cout << point(0) << " " << point(1) << std::endl;
+		data_file << point(0) << " " << point(1) << "\n";
+	}
+	if (data_file.is_open()) {
+		data_file.close();
+	}
+
+	return 0;
+}
+
+*/
+
+
+

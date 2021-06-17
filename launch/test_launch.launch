@@ -109,12 +109,7 @@
             <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
         </node>
 
-        <node name="dynamic_motion_planner" pkg="hdi_plan" type="dynamic_motion_planner" output="screen" >
-            <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
-        </node>
-
-        <node name="publish_trajectory_node" pkg="hdi_plan" type="publish_trajectory_node" output="screen">
-            <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
+        <node name="generate_dynamic_scene" pkg="hdi_plan" type="generate_dynamic_scene" output="screen" >
         </node>
 
     </group>

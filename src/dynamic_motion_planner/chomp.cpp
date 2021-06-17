@@ -8,7 +8,8 @@ Chomp::Chomp(const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<
 	this->full_trajectory_ = trajectory;
 	this->obstacle_map_ = obstacle_map;
 	this->initialize();
-	this->optimize();
+	bool res = this->optimize();
+	if (!res) ROS_WARN("Failed to find a collision free chomp solution");
 	this->convert_matrix_to_trajectory_points_vector();
 }
 
@@ -22,6 +23,8 @@ void Chomp::initialize() {
 	this->free_vars_start_ = this->full_trajectory_->get_start_index();
 	this->free_vars_end_ = this->full_trajectory_->get_end_index();
 
+	ROS_INFO("#######Num of vars, actual points are: ");
+	std::cout <<"##" << this->num_vars_origin_ << std::endl;
 	// get joint cost
 	std::vector<double> derivative_costs(3);
 	double joint_cost = 1.0;
@@ -64,7 +67,6 @@ void Chomp::initialize() {
 }
 
 bool Chomp::optimize() {
-	ROS_INFO("Chomp: Optimize()");
 	ros::WallTime start_time = ros::WallTime::now();
 	for (this->iteration_=0; this->iteration_ < this->max_iterations_; this->iteration_++) {
 		std::cout << "The iteration number is: " << this->iteration_ << std::endl;
@@ -133,7 +135,7 @@ void Chomp::perform_forward_kinematics() {
 	for (int i = start; i <= end; i++) {
 		this->collision_point_potential_[i] = this->get_potential(this->collision_point_pos_[i]);
 		// Todo: How to calculate the potential gradient
-		this->collision_point_potential_gradient_[i] = Eigen::Vector3d(0,0,0);
+		this->collision_point_potential_gradient_[i] = Eigen::Vector3d(1,1,1);
 	}
 
 	for (int i = this->free_vars_start_; i <= this->free_vars_end_; i++) {
@@ -157,7 +159,7 @@ double Chomp::get_potential(const Eigen::Vector3d& point) {
 	double distance_to_nearest_obstacle = std::numeric_limits<double>::infinity();
 	for (auto obstacle : this->obstacle_map_) {
 		double distance = hdi_plan_utils::get_distance(point, obstacle.second->get_position()) -
-				this->drone_radius_ - (obstacle.second->get_size()/2);
+				this->drone_radius_ - (obstacle.second->get_size()/2.0);
 		if (distance < distance_to_nearest_obstacle) distance_to_nearest_obstacle = distance;
 	}
 
@@ -244,7 +246,7 @@ void Chomp::calculate_collision_increments() {
 		curvature_vector = (orthogonal_projector * this->collision_point_acc_[i]) / vel_mag_sq;
 		cartesian_gradient = vel_mag * (orthogonal_projector * potential_gradient - potential * curvature_vector);
 
-		this->collision_increments_.row(i - this->free_vars_start_) -=
+		this->collision_increments_.row(i - this->free_vars_start_).transpose() -=
 				Eigen::MatrixXd::Identity(3, 3) * cartesian_gradient;
 	}
 }

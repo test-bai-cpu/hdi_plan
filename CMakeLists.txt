@@ -93,8 +93,6 @@ target_link_libraries(clock_server
         ${catkin_LIBRARIES}
         ${OpenCV_LIBRARIES}
         stdc++fs
-        zmq
-        zmqpp
         )
 
 # node: generate dynamic scene

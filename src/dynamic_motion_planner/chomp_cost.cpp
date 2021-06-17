@@ -13,14 +13,14 @@ ChompCost::ChompCost(const std::shared_ptr<ChompTrajectory>& trajectory, const s
 	// construct the quad cost for all variables, as a sum of squared differentiation matrices
 	double multiplier = 1.0;
 	for (unsigned int i = 0; i < derivative_costs.size(); i++) {
-		std::cout << "the iteration number is: " << i << std::endl;
+		//std::cout << "the iteration number is: " << i << std::endl;
 		multiplier *= trajectory->get_discretization();
 		diff_matrix = getDiffMatrix(num_vars_all, &hdi_plan_utils::DIFF_RULES[i][0]);
 		// the slow one is diff_matrix.transpose() * diff_matrix
 		ros::WallTime start_time = ros::WallTime::now();
 		Eigen::MatrixXd matrix_product = diff_matrix.transpose() * diff_matrix;
 		double process_time = (ros::WallTime::now() - start_time).toSec();
-		std::cout << "The diff_matrix.tranpose * diff_matrix time is: " << process_time << std::endl;
+		//std::cout << "The diff_matrix.tranpose * diff_matrix time is: " << process_time << std::endl;
 		this->quad_cost_full_ += (derivative_costs[i] * multiplier) * matrix_product;
 	}
 	this->quad_cost_full_ += Eigen::MatrixXd::Identity(num_vars_all, num_vars_all) * ridge_factor;

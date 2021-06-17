@@ -94,18 +94,18 @@ private:
 	int worst_collision_cost_state_{-1};
 
 	// parameters
-	double planning_time_limit_{6.0};
+	double planning_time_limit_{60.0};
 	int max_iterations_{50};
 	int max_iterations_after_collision_free_{15};
-	double smoothness_cost_weight_{1.0};
-	double obstacle_cost_weight_{1.0};
-	double learning_rate_{0.01};
+	double smoothness_cost_weight_{0.1};
+	double obstacle_cost_weight_{0.1};
+	double learning_rate_{0.1};
 	double smoothness_cost_velocity_{0.0};
 	double smoothness_cost_acceleration_{1.0};
 	double smoothness_cost_jerk_{0.0};
 	double ridge_factor_{0.0};
 	double drone_radius_{0.5};
-	double min_clearence_{0.2};
+	double min_clearence_{0.5};
 	double joint_update_limit_{0.1};
 	bool use_stochastic_descent_{false};
 

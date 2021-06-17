@@ -538,7 +538,7 @@ void MotionPlanner::publish_solution_path() {
 void MotionPlanner::optimize_solution_path() {
 	ros::WallTime chomp_start_time = ros::WallTime::now();
 	ROS_INFO("Found the solution path, start to optimize");
-
+	std::cout << "The solution path contains: " << this->solution_path.size() << " points" << std::endl;
 	auto chomp_trajectory = std::make_shared<ChompTrajectory>(this->solution_path);
 	auto chomp = std::make_shared<Chomp>(chomp_trajectory, this->obstacle_map);
 	std::vector<Eigen::Vector3d> optimized_trajectory = chomp->get_optimized_trajectory();
