@@ -16,7 +16,10 @@
 #include <quadrotor_common/trajectory_point.h>
 
 #include <Eigen/Dense>
+#include <iostream>
+#include <fstream>
 
+#include "utils/utility_functions.hpp"
 #include <hdi_plan/point_array.h>
 #include <hdi_plan/obstacle_info.h>
 
@@ -44,14 +47,18 @@ private:
 	ros::Publisher hover_pub_;
 	ros::Publisher go_to_pose_pub_;
 	ros::Publisher max_velocity_pub_;
+	ros::Publisher pub_solution_path_;
+	ros::Publisher trajectory_pub_;
 
-	Eigen::Vector3d quadrotor_state;
+	Eigen::Vector3d quadrotor_state_;
 	bool if_get_new_path_ = false;
 
 	void start_quadrotor_bridge();
 	void quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg);
 	void get_new_path_callback(const std_msgs::Bool::ConstPtr &msg);
 	void trajectory_callback(const hdi_plan::point_array::ConstPtr &msg);
+
+	std::ofstream executed_path_file;
 };
 
 }  // namespace flightros 

@@ -84,26 +84,6 @@
             <remap from="autopilot/state_estimate" to="ground_truth/odometry" />
         </node>
 
-        <group if="$(arg use_mpc)">
-            <node pkg="rpg_mpc" type="autopilot_mpc_instance" name="autopilot" output="screen">
-                <rosparam file="$(find state_predictor)/parameters/hummingbird.yaml" />
-                <rosparam file="$(find rpg_mpc)/parameters/default.yaml" />
-                <rosparam file="$(find rpg_rotors_interface)/parameters/autopilot.yaml" />
-
-                <param name="velocity_estimate_in_world_frame" value="false" />
-                <param name="state_estimate_timeout" value="0.1" />
-                <param name="control_command_delay" value="0.05" />
-                <param name="enable_command_feedthrough" value="$(arg enable_command_feedthrough)" />
-
-                <remap from="autopilot/state_estimate" to="ground_truth/odometry" />
-            </node>
-        </group>
-
-        <node pkg="manual_flight_assistant" type="manual_flight_assistant"
-              name="manual_flight_assistant" output="screen">
-            <rosparam file="$(find rpg_rotors_interface)/parameters/manual_flight_assistant.yaml"/>
-        </node>
-
         <node name="start_quadrotor_node" pkg="hdi_plan" type="start_quadrotor_node" output="screen">
             <rosparam file="$(find hdi_plan)/params/start_quadrotor.yaml" />
             <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
@@ -113,11 +93,14 @@
             <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
         </node>
 
-        <node name="generate_dynamic_scene" pkg="hdi_plan" type="generate_dynamic_scene" output="screen" >
+        <node name="generate_dynamic_scene_node" pkg="hdi_plan" type="generate_dynamic_scene_node" output="screen" >
         </node>
 
         <node name="publish_trajectory_node" pkg="hdi_plan" type="publish_trajectory_node" output="screen">
             <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
+        </node>
+
+        <node name="path_visualization_node" pkg="hdi_plan" type="path_visualization_node" output="screen" >
         </node>
 
     </group>

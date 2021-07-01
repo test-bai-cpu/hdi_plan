@@ -85,7 +85,7 @@ private:
 	int num_points_diff_;
 	int num_points_free_;
 	int num_joints_{3};
-	double discretization_{0.1}; // every interval is 0.01s
+	double discretization_{0.5}; // every interval is 0.1s
 	double speed_{1.0};
 	std::vector<int> group_number_;
 	std::vector<int> group_number_add_;

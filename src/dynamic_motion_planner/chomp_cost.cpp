@@ -4,7 +4,6 @@ namespace hdi_plan {
 
 ChompCost::ChompCost(const std::shared_ptr<ChompTrajectory>& trajectory, const std::vector<double> &derivative_costs,
 					 double ridge_factor) {
-	ROS_INFO("ChompCost: start");
 	int num_vars_all = trajectory->get_num_points_diff();
 	int num_vars_free = num_vars_all - 2 * (hdi_plan_utils::DIFF_RULE_LENGTH - 1);
 	Eigen::MatrixXd diff_matrix = Eigen::MatrixXd::Zero(num_vars_all, num_vars_all);
@@ -30,7 +29,6 @@ ChompCost::ChompCost(const std::shared_ptr<ChompTrajectory>& trajectory, const s
 
 	// invert the matrix:
 	quad_cost_inv_ = quad_cost_.inverse();
-	ROS_INFO("ChompCost: finish");
 }
 
 ChompCost::~ChompCost() = default;

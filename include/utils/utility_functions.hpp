@@ -17,6 +17,10 @@ inline double get_distance(const Eigen::Vector3d& point1, const Eigen::Vector3d&
 	return static_cast<double>(std::sqrt((point1 - point2).squaredNorm()));
 }
 
+inline double get_distance_2d(const Eigen::Vector2d& point1, const Eigen::Vector2d& point2) {
+	return static_cast<double>(std::sqrt((point1 - point2).squaredNorm()));
+}
+
 inline double get_random_double()
 {
 	std::default_random_engine seed;

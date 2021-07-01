@@ -13,6 +13,8 @@
 #include <map>
 #include <queue>
 #include <algorithm>
+#include <iostream>
+#include <fstream>
 
 //ompl
 #include "ompl/datastructures/NearestNeighbors.h"
@@ -117,6 +119,8 @@ private:
 	ros::Publisher pub_go_to_pose_;
 	ros::Publisher pub_max_velocity_;
     ros::Publisher pub_get_new_path_;
+    
+    ros::Publisher pub_solution_path_;
 
     // main loop
     bool solve();
@@ -189,7 +193,7 @@ private:
 	bool check_if_edge_collide_human(const std::shared_ptr<RRTNode>& node1, const std::shared_ptr<RRTNode>& node2);
 	//void find_nodes_in_human_position(const Eigen::Vector2d& human_position);
 	//Eigen::Vector2d human_position_;
-	//bool add_human_{false};
+	bool if_add_human_{false};
 	//bool check_if_node_inside_human(const std::shared_ptr<RRTNode>& node);
 	//double check_if_state_near_human(const Eigen::Vector3d& state1);
 
@@ -198,6 +202,9 @@ private:
 	double generate_random_time(const Eigen::Vector3d& state);
 	double quadrotor_speed_{1};
 	ros::Time start_time_;
+
+    // path write to file name
+    int path_file_num_{0};
 };
 
 

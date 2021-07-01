@@ -84,6 +84,48 @@ target_link_libraries(publish_trajectory_node
         stdc++fs
         )
 
+# node: path visualization
+cs_add_library(path_visualization
+        src/path_visualization/path_visualization.cpp
+        src/path_visualization/visualization_markers.cpp
+        )
+cs_add_executable(path_visualization_node
+        src/path_visualization/path_visualization_node.cpp
+        )
+target_link_libraries(path_visualization
+        ${catkin_LIBRARIES}
+        stdc++fs
+        )
+target_link_libraries(path_visualization_node
+        path_visualization
+        ${catkin_LIBRARIES}
+        stdc++fs
+        )
+
+# node: generate dynamic scene
+cs_add_library(generate_dynamic_scene_dependencies
+        src/generate_dynamic_scene/generate_obstacle.cpp
+        src/generate_dynamic_scene/obstacle.cpp
+        src/generate_dynamic_scene/human.cpp
+        src/dynamic_motion_planner/chomp.cpp
+        src/dynamic_motion_planner/chomp_trajectory.cpp
+        src/dynamic_motion_planner/chomp_cost.cpp
+        )
+
+cs_add_executable(generate_dynamic_scene_node
+        src/generate_dynamic_scene/generate_obstacle_node.cpp
+        )
+target_link_libraries(generate_dynamic_scene_dependencies
+        ${catkin_LIBRARIES}
+        ${OpenCV_LIBRARIES}
+        stdc++fs
+        )
+target_link_libraries(generate_dynamic_scene_node
+        generate_dynamic_scene_dependencies
+        ${catkin_LIBRARIES}
+        stdc++fs
+        )
+
 # node: clock server, not used now
 cs_add_executable(clock_server
         src/clock_server/clock_server.cpp
@@ -92,29 +134,6 @@ cs_add_executable(clock_server
 target_link_libraries(clock_server
         ${catkin_LIBRARIES}
         ${OpenCV_LIBRARIES}
-        stdc++fs
-        )
-
-# node: generate dynamic scene
-cs_add_library(generate_dynamic_scene_dependencies
-        src/generate_dynamic_scene/obstacle.cpp
-        src/generate_dynamic_scene/human.cpp
-        src/dynamic_motion_planner/chomp.cpp
-        src/dynamic_motion_planner/chomp_trajectory.cpp
-        src/dynamic_motion_planner/chomp_cost.cpp
-        )
-
-cs_add_executable(generate_dynamic_scene
-        src/generate_dynamic_scene/generate_obstacle.cpp
-        )
-target_link_libraries(generate_dynamic_scene_dependencies
-        ${catkin_LIBRARIES}
-        ${OpenCV_LIBRARIES}
-        stdc++fs
-        )
-target_link_libraries(generate_dynamic_scene
-        generate_dynamic_scene_dependencies
-        ${catkin_LIBRARIES}
         stdc++fs
         )
 

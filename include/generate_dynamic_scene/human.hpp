@@ -24,7 +24,7 @@ public:
 	Eigen::Vector2d start_position_;
 	Eigen::Vector2d second_position_;
 	double start_time_;
-	double human_block_distance_{1};
+	double human_block_distance_{5};
 	bool if_move_{false};
 private:
 

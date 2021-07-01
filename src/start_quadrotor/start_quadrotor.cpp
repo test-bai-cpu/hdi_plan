@@ -50,15 +50,15 @@ void StartQuadrotor::spawn_quadrotor() {
 }
 
 void StartQuadrotor::obstacle_callback(const hdi_plan::obstacle_info::ConstPtr &msg) {
-    std::cout << "Now render the obstacle." << std::endl;
+    //std::cout << "Now render the obstacle." << std::endl;
 	std::string obstacle_id = msg->name;
-    std::cout << "obstacle_id is " << obstacle_id << std::endl;
+    //std::cout << "obstacle_id is " << obstacle_id << std::endl;
 	Obstacle_type obstacle_type = static_cast<Obstacle_type>(msg->type);
-    std::cout << "obstacle_type is " << obstacle_type << std::endl;
+    //std::cout << "obstacle_type is " << obstacle_type << std::endl;
 	bool obstacle_operation = msg->operation;
-    std::cout << "obstacle_operation is " << obstacle_operation << std::endl;
+    //std::cout << "obstacle_operation is " << obstacle_operation << std::endl;
 	double obstacle_size = static_cast<double>(msg->size);
-	std::cout << "obstacle_size is " << obstacle_size << std::endl;
+	//std::cout << "obstacle_size is " << obstacle_size << std::endl;
 
 	std::string prefab_id;
 	switch (obstacle_type) {
@@ -79,7 +79,7 @@ void StartQuadrotor::obstacle_callback(const hdi_plan::obstacle_info::ConstPtr &
 		}
 		case Obstacle_type::human: {
 			std::cout << "human" << std::endl;
-			prefab_id = "human";
+			prefab_id = "Sphere";
 			break;
 		}
 		default: {
@@ -91,10 +91,10 @@ void StartQuadrotor::obstacle_callback(const hdi_plan::obstacle_info::ConstPtr &
 
     std::shared_ptr<StaticObject> obstacle = std::make_shared<StaticObject>(obstacle_id, prefab_id);
 	if (obstacle_operation) {
-        std::cout << "Add the obstacle" << std::endl;
+        //std::cout << "Add the obstacle" << std::endl;
 		obstacle->setPosition(Eigen::Vector3f((Scalar)msg->position.x, (Scalar)msg->position.y, (Scalar)msg->position.z));
 	} else {
-        std::cout << "Remove the obstacle" << std::endl;
+        //std::cout << "Remove the obstacle" << std::endl;
 		obstacle->setPosition(Eigen::Vector3f(100, 100, 100));
 	}
 

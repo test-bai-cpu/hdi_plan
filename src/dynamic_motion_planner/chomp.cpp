@@ -4,7 +4,7 @@ namespace hdi_plan {
 
 Chomp::Chomp(const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<std::string,
 			 std::shared_ptr<Obstacle>>& obstacle_map) {
-	ROS_INFO("Start in the chomp");
+	//ROS_INFO("Start in the chomp");
 	this->full_trajectory_ = trajectory;
 	this->obstacle_map_ = obstacle_map;
 	this->initialize();
@@ -16,15 +16,15 @@ Chomp::Chomp(const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<
 Chomp::~Chomp() = default;
 
 void Chomp::initialize() {
-	ROS_INFO("Chomp: Initialize");
+	//ROS_INFO("Chomp: Initialize");
 	this->num_vars_all_ = this->full_trajectory_->get_num_points_diff(); // actual points + 10
 	this->num_vars_free_ = this->full_trajectory_->get_num_points_free(); // actual points - 2
 	this->num_vars_origin_ = this->full_trajectory_->get_num_points(); // actual points
 	this->free_vars_start_ = this->full_trajectory_->get_start_index();
 	this->free_vars_end_ = this->full_trajectory_->get_end_index();
 
-	ROS_INFO("#######Num of vars, actual points are: ");
-	std::cout <<"##" << this->num_vars_origin_ << std::endl;
+	//ROS_INFO("#######Num of vars, actual points are: ");
+	//std::cout <<"##" << this->num_vars_origin_ << std::endl;
 	// get joint cost
 	std::vector<double> derivative_costs(3);
 	double joint_cost = 1.0;
@@ -69,7 +69,7 @@ void Chomp::initialize() {
 bool Chomp::optimize() {
 	ros::WallTime start_time = ros::WallTime::now();
 	for (this->iteration_=0; this->iteration_ < this->max_iterations_; this->iteration_++) {
-		std::cout << "The iteration number is: " << this->iteration_ << std::endl;
+		//std::cout << "The iteration number is: " << this->iteration_ << std::endl;
 		perform_forward_kinematics();
 		double c_cost = this->get_collision_cost();
 		double s_cost = this->get_smoothness_cost();
@@ -98,9 +98,9 @@ bool Chomp::optimize() {
 		}
 	}
 
-	ROS_INFO("Terminated after %d iterations, using path from iteration %d", this->iteration_, this->last_improvement_iteration_);
-	ROS_INFO("Optimization core finished in %f sec", (ros::WallTime::now() - start_time).toSec());
-	ROS_INFO_STREAM("Time per iteration " << (ros::WallTime::now() - start_time).toSec() / (this->iteration_ * 1.0));
+	//ROS_INFO("Terminated after %d iterations, using path from iteration %d", this->iteration_, this->last_improvement_iteration_);
+	//ROS_INFO("Optimization core finished in %f sec", (ros::WallTime::now() - start_time).toSec());
+	//ROS_INFO_STREAM("Time per iteration " << (ros::WallTime::now() - start_time).toSec() / (this->iteration_ * 1.0));
 
 	return is_collsion_free_;
 }
@@ -207,6 +207,11 @@ void Chomp::calculate_smoothness_increments() {
 		this->smoothness_derivative_ = this->joint_costs_[i]->getDerivative(this->full_trajectory_->get_joint_trajectory(i));
 		this->smoothness_increments_.col(i) = -this->smoothness_derivative_.segment(this->full_trajectory_->get_start_index(), this->num_vars_free_);
 	}
+
+	/*
+	for (int i = 0; i < this->num_vars_free_; i++) {
+		std::cout << "The smoothness increments are: " << this->smoothness_increments_(i, 0) << " " << this->smoothness_increments_(i, 1) << " " << this->smoothness_increments_(i, 2) << std::endl;
+	}*/
 }
 
 void Chomp::calculate_collision_increments() {
@@ -249,6 +254,11 @@ void Chomp::calculate_collision_increments() {
 		this->collision_increments_.row(i - this->free_vars_start_).transpose() -=
 				Eigen::MatrixXd::Identity(3, 3) * cartesian_gradient;
 	}
+
+	/*
+	for (int i = 0; i < this->num_vars_free_; i++) {
+		std::cout << "The collision increments are: " << this->collision_increments_(i, 0) << " " << this->collision_increments_(i, 1) << " " << this->collision_increments_(i, 2) << std::endl;
+	}*/
 }
 
 /*
@@ -295,7 +305,7 @@ void Chomp::add_increments_to_trajectory() {
 }
 
 void Chomp::convert_matrix_to_trajectory_points_vector() {
-	ROS_INFO("Chomp: convert to optimized trajectory");
+	//ROS_INFO("Chomp: convert to optimized trajectory");
 	int start_extra = this->full_trajectory_->get_start_extra();
 
 	for (int i = 0; i < this->num_vars_origin_; i++) {

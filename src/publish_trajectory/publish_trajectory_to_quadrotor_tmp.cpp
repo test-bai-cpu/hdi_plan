@@ -10,27 +10,25 @@ PublishTrajectory::PublishTrajectory(const ros::NodeHandle &nh, const ros::NodeH
 	start_pub_ = nh_.advertise<std_msgs::Empty>("autopilot/start", 1);
 
 	go_to_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("autopilot/pose_command", 100);
+	trajectory_pub_ = nh_.advertise<quadrotor_msgs::Trajectory>("autopilot/trajectory", 1);
 	max_velocity_pub_ = nh_.advertise<std_msgs::Float64>("autopilot/max_velocity", 1);
 	trajectory_sub_ = nh_.subscribe("hdi_plan/full_trajectory", 1, &PublishTrajectory::trajectory_callback, this);
-	//pub_solution_path_ = nh_.advertise<geometry_msgs::PoseStamped>("command/pose", 1);
 	pub_solution_path_ = nh_.advertise<geometry_msgs::PoseStamped>("autopilot/pose_command", 1);
 	get_new_path_sub_ = nh_.subscribe("hdi_plan/get_new_path", 1, &PublishTrajectory::get_new_path_callback, this);
 
 	quadrotor_state_sub_ = nh_.subscribe("hdi_plan/quadrotor_state", 1, &PublishTrajectory::quadrotor_state_callback, this);
 
-	ros::Duration(5.0).sleep();
+	ros::Duration(9.0).sleep();
 	start_quadrotor_bridge();
 
-	std::string file_name = "executed_path.txt";
-	executed_path_file.open(file_name);
 }
 
 PublishTrajectory::~PublishTrajectory() {}
 
 void PublishTrajectory::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg) {
-	quadrotor_state_(0) = msg->pose.pose.position.x;
-	quadrotor_state_(1) = msg->pose.pose.position.y;
-	quadrotor_state_(2) = msg->pose.pose.position.z;
+	quadrotor_state(0) = msg->pose.pose.position.x;
+	quadrotor_state(1) = msg->pose.pose.position.y;
+	quadrotor_state(2) = msg->pose.pose.position.z;
 }
 
 void PublishTrajectory::start_quadrotor_bridge() {
@@ -43,13 +41,13 @@ void PublishTrajectory::start_quadrotor_bridge() {
 	this->start_pub_.publish(empty_message);
 	ros::Duration(7.0).sleep();
 
+	ROS_INFO("Go to pose msg");
 	geometry_msgs::PoseStamped go_to_pose_msg;
-	go_to_pose_msg.pose.position.x = 1.0;
-	go_to_pose_msg.pose.position.y = 3.0;
+	go_to_pose_msg.pose.position.x = 0.0;
+	go_to_pose_msg.pose.position.y = 4.0;
 	go_to_pose_msg.pose.position.z = 1.0;
 	
 	this->pub_solution_path_.publish(go_to_pose_msg);
-	//this->go_to_pose_pub_.publish(go_to_pose_msg);
 }
 
 void PublishTrajectory::get_new_path_callback(const std_msgs::Bool::ConstPtr &msg) {
@@ -61,31 +59,26 @@ void PublishTrajectory::trajectory_callback(const hdi_plan::point_array::ConstPt
 	int trajectory_size = msg->points.size();
 	this->if_get_new_path_ = false;
 
-	geometry_msgs::PoseStamped go_to_pose_msg;
-	bool find_current_position = false;
+	quadrotor_msgs::Trajectory trajectory_msg;
+	trajectory_msg.header.stamp = ros::Time::now();
+	trajectory_msg.type = trajectory_msg.GENERAL;
+
 	for (int i = 0; i < trajectory_size; i++) {
-		//if (i % 20 != 1) continue;
 		if (this->if_get_new_path_) {
 			ROS_INFO("Now break the previous callback");
 			break;
 		}
-
-		if (!find_current_position) {
-			Eigen::Vector3d traj_point(msg->points[i].x, msg->points[i].y, msg->points[i].z);
-			double distance = hdi_plan_utils::get_distance(traj_point, this->quadrotor_state_);
-			if (distance < 1) find_current_position = true;
-			continue;
-		}
-
-		go_to_pose_msg.pose.position.x = msg->points[i].x;
-		go_to_pose_msg.pose.position.y = msg->points[i].y;
-		go_to_pose_msg.pose.position.z = msg->points[i].z;
-		//this->go_to_pose_pub_.publish(go_to_pose_msg);
-		this->pub_solution_path_.publish(go_to_pose_msg);
-		std::cout << "The executed position is: " << msg->points[i].x << " " << msg->points[i].y << " " << msg->points[i].z << std::endl;
-		this->executed_path_file << msg->points[i].x << " " << msg->points[i].y << " " << msg->points[i].z << "\n";
-		ros::Duration(0.1).sleep();
+		quadrotor_common::TrajectoryPoint point1 = quadrotor_common::TrajectoryPoint();
+		quadrotor_msgs::TrajectoryPoint point;
+		geometry_msgs::Point point_msg;
+		point_msg.x = msg->points[i].x;
+		point_msg.y = msg->points[i].y;
+		point_msg.z = msg->points[i].z;
+		point.pose.position = point_msg;
+		trajectory_msg.points.push_back(point);
 	}
+
+	this->trajectory_pub_.publish(trajectory_msg);
 }
 
 }

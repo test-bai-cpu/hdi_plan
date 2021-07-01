@@ -32,15 +32,18 @@ bool Human::check_if_node_inside_human(const std::shared_ptr<RRTNode>& node) {
 		return false;
 	}
 
-	if (node->get_state()(2)>this->human_height_) {
-		return false;
-	}
+	//if (node->get_state()(2)>this->human_height_) {
+	//	return false;
+	//}
 
 	if (!this->if_move_) {
 		return this->get_distance(this->start_position_, node_position)<this->human_block_distance_;
 	}
 
 	Eigen::Vector2d predict_position = this->predict_path(node_time);
+	//std::cout << "The predict position is: " << predict_position(0) << " " << predict_position(1) << std::endl;
+	//std::cout << "The distance to human is: " << this->get_distance(predict_position, node_position) << std::endl;
+	
 	return this->get_distance(predict_position, node_position)<this->human_block_distance_;
 }
 
