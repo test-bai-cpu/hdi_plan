@@ -29,7 +29,8 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh, const ros::NodeHandle &p
 	this->pub_go_to_pose_ = nh_.advertise<geometry_msgs::PoseStamped>("autopilot/pose_command", 1);
 	this->pub_max_velocity_ = nh_.advertise<std_msgs::Float64>("autopilot/max_velocity", 1);
 	this->pub_get_new_path_ = nh_.advertise<std_msgs::Bool>("hdi_plan/get_new_path", 1);
-
+	this->pub_node_pos_ = nh_.advertise<geometry_msgs::Point>("hdi_plan/node_position", 1);
+	this->pub_blocked_node_pos_ = nh_.advertise<geometry_msgs::Point>("hdi_plan/blocked_node_position", 1);
 
 	// not use autopilot to pub
 	this->pub_solution_path_ = nh_.advertise<geometry_msgs::PoseStamped>("command/pose", 1);
@@ -60,15 +61,15 @@ void MotionPlanner::initiate_obstacles() {
 }
 
 double MotionPlanner::distance_function(const std::shared_ptr<RRTNode>& a, const std::shared_ptr<RRTNode>& b) {
-    return this->compute_cost(a->get_state(), b->get_state());
+	return hdi_plan_utils::get_distance(a->get_state(), b->get_state());
 }
 
 void MotionPlanner::setup() {
     //Eigen::Vector3d start_position(0,0,5);
-    Eigen::Vector3d start_position(1,3,1);
+    Eigen::Vector3d start_position(1,8,2);
     this->start_ = std::make_shared<RRTNode>(start_position, 0);
     //Eigen::Vector3d goal_position(20,20,5);
-    Eigen::Vector3d goal_position(20,3,1);
+    Eigen::Vector3d goal_position(20,8,2);
     this->goal_ = std::make_shared<RRTNode>(goal_position, this->total_plan_time_);
     this->goal_->set_lmc(0);
     this->goal_->set_g_cost(0);
@@ -122,12 +123,15 @@ std::shared_ptr<RRTNode> MotionPlanner::generate_random_node() {
 	} else {
 		double lower_bound = 0;
 		//double upper_bound = 30;
-        double upper_bound = 20;
+        double upper_bound = 24;
 		x = lower_bound + (rand()/double(RAND_MAX)*(upper_bound - lower_bound));
+
+		//lower_bound = 2;
+		//upper_bound = 4;
 		y = lower_bound + (rand()/double(RAND_MAX)*(upper_bound - lower_bound));
 
-        //upper_bound = 20;
-        upper_bound = 10;
+        //lower_bound = 0;
+        upper_bound = 3;
 		z = lower_bound + (rand()/double(RAND_MAX)*(upper_bound - lower_bound));
 	}
 
@@ -138,7 +142,7 @@ std::shared_ptr<RRTNode> MotionPlanner::generate_random_node() {
 }
 
 double MotionPlanner::generate_random_time(const Eigen::Vector3d& state) {
-	double min_time = this->total_plan_time_ - this->compute_cost(state, this->goal_->get_state())/this->quadrotor_speed_;
+	double min_time = this->total_plan_time_ - hdi_plan_utils::get_distance(state, this->goal_->get_state())/this->quadrotor_speed_;
 	double max_time = this->total_plan_time_;
 	double random_time = min_time + (rand()/double(RAND_MAX)*(max_time - min_time));
 	return random_time;
@@ -149,7 +153,7 @@ void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr 
     Eigen::Vector3d quadrotor_state(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
     this->quadrotor_state_ = quadrotor_state;
     this->quadrotor_ = std::make_shared<RRTNode>(quadrotor_state);
-    if (this->compute_cost(quadrotor_state, this->goal_->get_state()) > 1.5) {
+    if (hdi_plan_utils::get_distance(quadrotor_state, this->goal_->get_state()) > 1) {
         this->solve();
     } else {
         ROS_INFO("Already reach the goal. Will exit.");
@@ -211,12 +215,13 @@ void MotionPlanner::human_movement_callback(const geometry_msgs::Point::ConstPtr
 bool MotionPlanner::solve() {
 	ros::Duration(0.1).sleep();
     this->iteration_count += 1;
-    std::cout << "The iteration number is: " << this->iteration_count << std::endl;
+    std::cout << "The iteration number is: " << this->iteration_count << "The nodes number is: " << static_cast<double>(this->nearest_neighbors_tree_->size()) << std::endl;
+    /*
     if(!this->position_ready) {
         ROS_INFO("Set to start position");
         this->set_to_start_position();
 		ros::Duration(2.0).sleep();
-    }
+    }*/
 
     this->calculateRRG();
 
@@ -229,7 +234,7 @@ bool MotionPlanner::solve() {
     // find the closest node in the tree
     std::shared_ptr<RRTNode> nearest_node = this->nearest_neighbors_tree_->nearest(random_node);
 
-    double distance = this->compute_cost(random_node->get_state(), nearest_node->get_state());
+    double distance = hdi_plan_utils::get_distance(random_node->get_state(), nearest_node->get_state());
 
     if (distance > this->max_distance_) {
         this->saturate(random_node, nearest_node, distance);
@@ -332,7 +337,7 @@ void MotionPlanner::remove_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
 }
 
 bool MotionPlanner::check_if_node_inside_obstacle(const std::shared_ptr<Obstacle>& obstacle, const std::shared_ptr<RRTNode>& node) {
-	double distance = this->compute_cost(obstacle->get_position(), node->get_state());
+	double distance = hdi_plan_utils::get_distance(obstacle->get_position(), node->get_state());
 	if (distance - this->drone_radius < obstacle->get_size()/2 + 1) {
         ROS_INFO("The node is inside obstacle");
 		return true;
@@ -405,15 +410,11 @@ void MotionPlanner::add_human_as_obstacle() {
 
 	for (auto it = nodes_list.begin(); it != nodes_list.end(); ++it) {
 		std::shared_ptr<RRTNode> node = *it;
-
-		//if (!this->check_if_edge_collide_human(node, node->parent)) {
-		//	continue;
-		//}
-
-		if (this->human_->check_if_node_inside_human(node)) {
-			std::cout << "The colliding with human node position is: " << node->get_state() << std::endl;
-			this->verify_orphan(node);
+		if (!this->human_->check_if_node_inside_human(node)) {
+			continue;
 		}
+		std::cout << "The colliding with human node position is: " << node->get_state() << std::endl;
+		this->verify_orphan(node);
 	}
 }
 
@@ -426,6 +427,14 @@ void MotionPlanner::add_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
 		if (!check_if_node_inside_obstacle(obstacle, node)) {
 			continue;
 		}
+
+		// publish the position of the blocked node to visualize
+		geometry_msgs::Point node_msg;
+		Eigen::Vector3d node_position = node->get_state();
+		node_msg.x = node_position(0);
+		node_msg.y = node_position(1);
+		node_msg.z = node_position(2);
+		this->pub_blocked_node_pos_.publish(node_msg);
 		this->verify_orphan(node);
 	}
 }
@@ -492,7 +501,7 @@ bool MotionPlanner::update_solution_path() {
 
     std::shared_ptr<RRTNode> nearest_node_of_quadrotor = this->nearest_neighbors_tree_->nearest(this->quadrotor_);
 
-    double cost_to_nearest_node = this->compute_cost(nearest_node_of_quadrotor->get_state(), this->quadrotor_->get_state());
+    double cost_to_nearest_node = hdi_plan_utils::get_distance(nearest_node_of_quadrotor->get_state(), this->quadrotor_->get_state());
 
     std::cout << "The distance from current position to nearest node: " << cost_to_nearest_node << std::endl;
     if (cost_to_nearest_node > this->max_distance_) {
@@ -514,6 +523,7 @@ bool MotionPlanner::update_solution_path() {
         }
         intermediate_node = intermediate_node->parent;
     }
+	this->if_find_solution_ = if_find_solution;
     return if_find_solution;
 }
 
@@ -586,7 +596,7 @@ void MotionPlanner::rewire_neighbors(std::shared_ptr<RRTNode> random_node) {
         if (random_node->parent == neighbor) {
             continue;
         }
-        double new_lmc_if_choose_random_node_as_parent = random_node->get_lmc()+this->compute_cost(neighbor->get_state(), random_node->get_state());
+        double new_lmc_if_choose_random_node_as_parent = random_node->get_lmc() + hdi_plan_utils::get_distance(neighbor->get_state(), random_node->get_state());
         if (neighbor->parent != this->goal_ && this->is_cost_better_than(new_lmc_if_choose_random_node_as_parent, neighbor->get_lmc())) {
             neighbor->set_lmc(new_lmc_if_choose_random_node_as_parent);
             this->make_parent_of(random_node, neighbor);
@@ -609,7 +619,7 @@ void MotionPlanner::make_parent_of(std::shared_ptr<RRTNode> parent_node, std::sh
 void MotionPlanner::cull_neighbors(std::shared_ptr<RRTNode> random_node) {
     for (auto it = random_node->nr_out.begin(); it != random_node->nr_out.end(); ++it) {
         std::shared_ptr<RRTNode> neighbor = *it;
-        if (this->rrg_r_ < this->compute_cost(random_node->get_state(), neighbor->get_state()) && random_node->parent != neighbor) {
+        if (this->rrg_r_ < hdi_plan_utils::get_distance(random_node->get_state(), neighbor->get_state()) && random_node->parent != neighbor) {
             random_node->nr_out.erase(it);
             for (auto u_it = neighbor->nr_in.begin(); u_it != neighbor->nr_in.end(); ++u_it) {
                 if (*u_it == random_node) {
@@ -698,7 +708,7 @@ void MotionPlanner::update_lmc(std::shared_ptr<RRTNode> node) {
         if (is_orphan || neighbor->parent == node) {
             continue;
         }
-        double inc_cost = this->compute_cost(node->get_state(), neighbor->get_state());  // d(v,u)
+        double inc_cost = hdi_plan_utils::get_distance(node->get_state(), neighbor->get_state());  // d(v,u)
         double cost = this->combine_cost(neighbor->get_lmc(), inc_cost); // d(v,u) + lmc(u)
         // if lmc(v) > d(v,u) + lmc(u)
         if (node->parent != this->goal_ && this->is_cost_better_than(cost, node->get_lmc())) {
@@ -776,6 +786,14 @@ bool MotionPlanner::extend(std::shared_ptr<RRTNode> random_node) {
     this->nearest_neighbors_tree_->add(random_node);
     random_node->parent->children.push_back(random_node);
 
+    // publish the position of node to visualize
+    geometry_msgs::Point node_msg;
+    Eigen::Vector3d random_node_position = random_node->get_state();
+    node_msg.x = random_node_position(0);
+	node_msg.y = random_node_position(1);
+	node_msg.z = random_node_position(2);
+	this->pub_node_pos_.publish(node_msg);
+
     // after connecting the parent, now is updating list of v's neighbors
     for (auto it = random_node->nbh.begin(); it != random_node->nbh.end(); ++it) {
         std::shared_ptr<RRTNode> neighbor = it->first;
@@ -798,7 +816,7 @@ bool MotionPlanner::find_best_parent(std::shared_ptr<RRTNode> random_node) {
     for (auto it = random_node->nbh.begin(); it != random_node->nbh.end(); ++it) {
         std::shared_ptr<RRTNode> neighbor = it->first;
         // compute cost using this neighbor as a parent
-        double inc_cost = this->compute_cost(random_node->get_state(), neighbor->get_state());  // d(v,u)
+        double inc_cost = hdi_plan_utils::get_distance(random_node->get_state(), neighbor->get_state());  // d(v,u)
         double cost = this->combine_cost(neighbor->get_lmc(), inc_cost); // d(v,u) + lmc(u)
         // if lmc(v) > d(v,u) + lmc(u)
         //std::cout << "Now check why always not find the best parent" << std::endl;
@@ -822,10 +840,6 @@ void MotionPlanner::update_neighbors_list(std::shared_ptr<RRTNode> random_node) 
     random_node->nbh.resize(nbh.size());
     // the default bool value of all added nodes are false, the bool value is the feasibility of edge as been tested
     std::transform(nbh.begin(), nbh.end(), random_node->nbh.begin(), [](std::shared_ptr<RRTNode> node) { return std::pair<std::shared_ptr<RRTNode>, bool>(node, false);});
-}
-
-double MotionPlanner::compute_cost(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2) {
-	return static_cast<double>(std::sqrt((state1 - state2).squaredNorm()));
 }
 
 double MotionPlanner::combine_cost(double cost1, double cost2) {

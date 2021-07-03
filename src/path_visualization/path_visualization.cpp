@@ -7,7 +7,12 @@ PathVisualization::PathVisualization(const ros::NodeHandle &nh, const ros::NodeH
 		  pnh_(pnh) {
 	trajectory_vis_pub_ = nh_.advertise<visualization_msgs::Marker>(
 			"/visualization_marker", 1);
+	quadrotor_vis_pub_ = nh_.advertise<visualization_msgs::Marker>(
+			"/visualization_marker", 1);
 	trajectory_sub_ = nh_.subscribe("hdi_plan/full_trajectory", 1, &PathVisualization::trajectory_visualization_callback, this);
+	node_position_sub_ = nh_.subscribe("hdi_plan/node_position", 1, &PathVisualization::node_position_callback, this);
+	blocked_node_position_sub_ = nh_.subscribe("hdi_plan/blocked_node_position", 1, &PathVisualization::blocked_node_position_callback, this);
+	quadrotor_state_sub_ = nh_.subscribe("hdi_plan/quadrotor_state", 1, &PathVisualization::quadrotor_state_callback, this);
 }
 
 PathVisualization::~PathVisualization() = default;
@@ -116,7 +121,7 @@ void PathVisualization::trajectory_visualization_callback(const hdi_plan::point_
 	marker = VisualizationMarker();
 	marker.orientation.w() = 1.0;
 	marker.type = VisualizationMarker::POINTS;
-	marker.id = this->marker_id_;
+	marker.id = 0;
 	marker.ns = "candidate_trajectories";
 	marker.scale.x() = 0.04;
 	marker.scale.y() = 0.04;
@@ -135,6 +140,88 @@ void PathVisualization::trajectory_visualization_callback(const hdi_plan::point_
 	this->publish_visualization(marker);
 }
 
+
+void PathVisualization::node_position_callback(const geometry_msgs::Point::ConstPtr &msg) {
+	visualization_msgs::Marker marker;
+	marker.header.frame_id = "world";
+	marker.header.stamp = ros::Time::now();
+	marker.ns = "basic_shapes";
+	marker.id = this->marker_id_;
+	marker.type = visualization_msgs::Marker::SPHERE;
+	marker.action = visualization_msgs::Marker::ADD;
+	marker.pose.position.x = msg->x;
+	marker.pose.position.y = msg->y;
+	marker.pose.position.z = msg->z;
+	marker.pose.orientation.x = 0.0;
+	marker.pose.orientation.y = 0.0;
+	marker.pose.orientation.z = 0.0;
+	marker.pose.orientation.w = 1.0;
+	marker.scale.x = 0.1;
+	marker.scale.y = 0.1;
+	marker.scale.z = 0.1;
+	marker.color.a = 0.4;
+	marker.color.r = 0.0f;
+	marker.color.g = 1.0f;
+	marker.color.b = 0.0f;
+
+	this->trajectory_vis_pub_.publish(marker);
+
+	this->marker_id_ += 1;
+}
+
+void PathVisualization::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg) {
+	visualization_msgs::Marker marker;
+	marker.header.frame_id = "world";
+	marker.header.stamp = ros::Time::now();
+	marker.ns = "basic_shapes";
+	marker.id = 1;
+	marker.type = visualization_msgs::Marker::SPHERE;
+	marker.action = visualization_msgs::Marker::ADD;
+	marker.pose.position.x = msg->pose.pose.position.x;
+	marker.pose.position.y = msg->pose.pose.position.y;
+	marker.pose.position.z = msg->pose.pose.position.z;
+	marker.pose.orientation.x = 0.0;
+	marker.pose.orientation.y = 0.0;
+	marker.pose.orientation.z = 0.0;
+	marker.pose.orientation.w = 1.0;
+	marker.scale.x = 0.1;
+	marker.scale.y = 0.1;
+	marker.scale.z = 0.1;
+	marker.color.a = 0.4;
+	marker.color.r = 1.0f;
+	marker.color.g = 0.0f;
+	marker.color.b = 0.0f;
+
+	this->quadrotor_vis_pub_.publish(marker);
+}
+
+void PathVisualization::blocked_node_position_callback(const geometry_msgs::Point::ConstPtr &msg) {
+	visualization_msgs::Marker marker;
+	marker.header.frame_id = "world";
+	marker.header.stamp = ros::Time::now();
+	marker.ns = "basic_shapes";
+	marker.id = this->blocked_node_marker_id_;
+	marker.type = visualization_msgs::Marker::SPHERE;
+	marker.action = visualization_msgs::Marker::ADD;
+	marker.pose.position.x = msg->x;
+	marker.pose.position.y = msg->y;
+	marker.pose.position.z = msg->z;
+	marker.pose.orientation.x = 0.0;
+	marker.pose.orientation.y = 0.0;
+	marker.pose.orientation.z = 0.0;
+	marker.pose.orientation.w = 1.0;
+	marker.scale.x = 0.1;
+	marker.scale.y = 0.1;
+	marker.scale.z = 0.1;
+	marker.color.a = 0.4;
+	marker.color.r = 0.0f;
+	marker.color.g = 0.0f;
+	marker.color.b = 1.0f;
+
+	this->trajectory_vis_pub_.publish(marker);
+
+	this->blocked_node_marker_id_ += 1;
+}
 
 
 }

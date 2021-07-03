@@ -18,6 +18,9 @@ PublishTrajectory::PublishTrajectory(const ros::NodeHandle &nh, const ros::NodeH
 
 	quadrotor_state_sub_ = nh_.subscribe("hdi_plan/quadrotor_state", 1, &PublishTrajectory::quadrotor_state_callback, this);
 
+	Eigen::Vector3d goal_state(20,8,2);
+	this->goal_state_ = goal_state;
+
 	ros::Duration(5.0).sleep();
 	start_quadrotor_bridge();
 
@@ -45,8 +48,8 @@ void PublishTrajectory::start_quadrotor_bridge() {
 
 	geometry_msgs::PoseStamped go_to_pose_msg;
 	go_to_pose_msg.pose.position.x = 1.0;
-	go_to_pose_msg.pose.position.y = 3.0;
-	go_to_pose_msg.pose.position.z = 1.0;
+	go_to_pose_msg.pose.position.y = 8.0;
+	go_to_pose_msg.pose.position.z = 2.0;
 	
 	this->pub_solution_path_.publish(go_to_pose_msg);
 	//this->go_to_pose_pub_.publish(go_to_pose_msg);
@@ -70,6 +73,11 @@ void PublishTrajectory::trajectory_callback(const hdi_plan::point_array::ConstPt
 			break;
 		}
 
+		if (hdi_plan_utils::get_distance(quadrotor_state_, this->goal_state_) < 0.5) {
+			ROS_INFO("Already reach the goal area, in publish trajectory node. Stop publishing the trajectory.");
+			break;
+		}
+
 		if (!find_current_position) {
 			Eigen::Vector3d traj_point(msg->points[i].x, msg->points[i].y, msg->points[i].z);
 			double distance = hdi_plan_utils::get_distance(traj_point, this->quadrotor_state_);
@@ -84,7 +92,7 @@ void PublishTrajectory::trajectory_callback(const hdi_plan::point_array::ConstPt
 		this->pub_solution_path_.publish(go_to_pose_msg);
 		std::cout << "The executed position is: " << msg->points[i].x << " " << msg->points[i].y << " " << msg->points[i].z << std::endl;
 		this->executed_path_file << msg->points[i].x << " " << msg->points[i].y << " " << msg->points[i].z << "\n";
-		ros::Duration(0.1).sleep();
+		ros::Duration(0.5).sleep();
 	}
 }
 

@@ -43,6 +43,7 @@
 #include "dynamic_motion_planner/chomp.hpp"
 #include "dynamic_motion_planner/chomp_trajectory.hpp"
 #include "utils/types.hpp"
+#include "utils/utility_functions.hpp"
 #include "generate_dynamic_scene/obstacle.hpp"
 #include "generate_dynamic_scene/human.hpp"
 #include <hdi_plan/obstacle_info.h>
@@ -63,6 +64,7 @@ private:
     // debug
     int debug{0};
     int iteration_count{0};
+    bool if_find_solution_{false};
 
     // drone
     double drone_radius{0.5};
@@ -121,6 +123,8 @@ private:
     ros::Publisher pub_get_new_path_;
     
     ros::Publisher pub_solution_path_;
+    ros::Publisher pub_node_pos_;
+    ros::Publisher pub_blocked_node_pos_;
 
     // main loop
     bool solve();
@@ -142,7 +146,6 @@ private:
     bool find_best_parent(std::shared_ptr<RRTNode> random_node);
 
     // cost related members
-    double compute_cost(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2);
     //double compute_cost_human_cost_region_version(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2);
 	//double compute_cost_with_weight(const Eigen::Vector3d& state1, const Eigen::Vector3d& state2, double weight=1);
     double combine_cost(double cost1, double cost2);

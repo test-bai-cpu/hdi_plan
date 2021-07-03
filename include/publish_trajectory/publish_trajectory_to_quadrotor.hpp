@@ -51,6 +51,7 @@ private:
 	ros::Publisher trajectory_pub_;
 
 	Eigen::Vector3d quadrotor_state_;
+	Eigen::Vector3d goal_state_;
 	bool if_get_new_path_ = false;
 
 	void start_quadrotor_bridge();

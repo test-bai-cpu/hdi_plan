@@ -9,8 +9,8 @@ GenerateObstacle::GenerateObstacle(const ros::NodeHandle &nh, const ros::NodeHan
 	this->update_human_obstacle_pub_ = nh_.advertise<hdi_plan::obstacle_info>("hdi_plan/obstacle_info_topic", 1);
 
 	// wait until human movement start
-	//ros::Duration(25.0).sleep();
-	//this->publish_human_movement();
+	ros::Duration(28.0).sleep();
+	this->publish_human_movement();
 	//ros::Duration(21.0).sleep();
 	//this->publish_obstacle();
 }
@@ -43,15 +43,15 @@ void GenerateObstacle::publish_obstacle() {
 }
 
 void GenerateObstacle::publish_human_movement() {
-	Eigen::Vector2d start_point(5.0, 0.0);
-	Eigen::Vector2d goal_point(5.0, 10.0);
+	Eigen::Vector2d start_point(8.0, 0.0);
+	Eigen::Vector2d goal_point(8.0, 8.0);
 	Eigen::Vector2d current_point(start_point(0), start_point(1));
 	double distance = hdi_plan_utils::get_distance_2d(start_point, goal_point);
 	double velocity = 1;
 	double period = 1;
 
 	int count = 0;
-	ROS_INFO("#################Generate Obstacle: Start to spawn a human.");
+	ROS_INFO("###Generate Obstacle: Start to spawn a moving obstacle.");
 	while (hdi_plan_utils::get_distance_2d(current_point, goal_point) > 0.5 * period * velocity) {
 		if (count > 0) update_human_obstacle_pub_.publish(get_obstacle_message(false));
 
