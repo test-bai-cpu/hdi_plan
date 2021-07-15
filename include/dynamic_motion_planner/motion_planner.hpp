@@ -113,7 +113,7 @@ private:
 	void goal_point_callback(const geometry_msgs::Point::ConstPtr &msg);
 
 	ros::Subscriber sub_human_movement_;
-	void human_movement_callback(const geometry_msgs::Point::ConstPtr &msg);
+	void human_movement_callback(const hdi_plan::obstacle_info::ConstPtr &msg);
 	//void human_movement_callback_region_version(const geometry_msgs::Point::ConstPtr &msg);
 
     // publisher
@@ -189,10 +189,12 @@ private:
 	void make_parent_of(std::shared_ptr<RRTNode> parent_node, std::shared_ptr<RRTNode> node);
 
 	// human part
-	std::shared_ptr<Human> human_;
+	std::map<int, std::shared_ptr<Human>> human_map_;
+	std::vector<int> human_id_list_;
+	int get_human_id(const std::string human_name);
 	bool exist_human_{false};
 	int human_callback_count{0};
-	void add_human_as_obstacle();
+	void add_human_as_obstacle(int human_id);
 	bool check_if_edge_collide_human(const std::shared_ptr<RRTNode>& node1, const std::shared_ptr<RRTNode>& node2);
 	//void find_nodes_in_human_position(const Eigen::Vector2d& human_position);
 	//Eigen::Vector2d human_position_;

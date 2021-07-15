@@ -5,21 +5,23 @@ namespace hdi_plan {
 GenerateObstacle::GenerateObstacle(const ros::NodeHandle &nh, const ros::NodeHandle &pnh)
 		: nh_(nh),
 		  pnh_(pnh) {
-	this->human_movement_pub_ = nh_.advertise<geometry_msgs::Point>("hdi_plan/human_movement", 1);
+	this->human_movement_pub_ = nh_.advertise<hdi_plan::obstacle_info>("hdi_plan/human_movement", 1);
 	this->update_human_obstacle_pub_ = nh_.advertise<hdi_plan::obstacle_info>("hdi_plan/obstacle_info_topic", 1);
 
 	// wait until human movement start
-	ros::Duration(28.0).sleep();
-	this->publish_human_movement();
+	ros::Duration(25.0).sleep();
+	this->publish_human_movement_1();
+	ros::Duration(5.0).sleep();
+	this->publish_human_movement_2();
 	//ros::Duration(21.0).sleep();
 	//this->publish_obstacle();
 }
 
 GenerateObstacle::~GenerateObstacle() = default;
 
-hdi_plan::obstacle_info GenerateObstacle::get_obstacle_message(bool operation, double position_x, double position_y) {
+hdi_plan::obstacle_info GenerateObstacle::get_obstacle_message(bool operation, int human_id, double position_x, double position_y) {
 	hdi_plan::obstacle_info obstacle_msg;
-	obstacle_msg.name = "human";
+	obstacle_msg.name = "human_" + std::to_string(human_id);
 	obstacle_msg.type = hdi_plan::Obstacle_type::human;
 	obstacle_msg.operation = operation;
 	obstacle_msg.size = 1;
@@ -42,35 +44,55 @@ void GenerateObstacle::publish_obstacle() {
 	update_human_obstacle_pub_.publish(obstacle_msg);
 }
 
-void GenerateObstacle::publish_human_movement() {
+void GenerateObstacle::publish_human_movement_1() {
 	Eigen::Vector2d start_point(8.0, 0.0);
 	Eigen::Vector2d goal_point(8.0, 8.0);
 	Eigen::Vector2d current_point(start_point(0), start_point(1));
 	double distance = hdi_plan_utils::get_distance_2d(start_point, goal_point);
 	double velocity = 1;
 	double period = 1;
-
+	int human_id = 1;
 	int count = 0;
-	ROS_INFO("###Generate Obstacle: Start to spawn a moving obstacle.");
+	ROS_INFO("###Generate Obstacle: Start to spawn a moving obstacle 1.");
 	while (hdi_plan_utils::get_distance_2d(current_point, goal_point) > 0.5 * period * velocity) {
-		if (count > 0) update_human_obstacle_pub_.publish(get_obstacle_message(false));
+		if (count > 0) update_human_obstacle_pub_.publish(get_obstacle_message(false, human_id));
 
 		current_point(0) = (goal_point(0) - start_point(0)) * (velocity * count * period) / distance + start_point(0);
 		current_point(1) = (goal_point(1) - start_point(1)) * (velocity * count * period) / distance + start_point(1);
 
-		//std::cout << "The human current position is, x: " << current_point(0) << " y: " << current_point(1) << std::endl;
+		update_human_obstacle_pub_.publish(get_obstacle_message(true, human_id, current_point(0), current_point(1)));
+		if (count > 0) human_movement_pub_.publish(get_obstacle_message(true, human_id, current_point(0), current_point(1)));
 
-		update_human_obstacle_pub_.publish(get_obstacle_message(true, current_point(0), current_point(1)));
-		geometry_msgs::Point msg;
-		msg.x = current_point(0);
-		msg.y = current_point(1);
-		msg.z = 0;
-		human_movement_pub_.publish(msg);
+		ros::Duration(period).sleep();
+		count += 1;
+	}
+	ROS_INFO("###Finish Generate Obstacle: Start to spawn a moving obstacle 1.");
+}
+
+void GenerateObstacle::publish_human_movement_2() {
+	Eigen::Vector2d start_point(5.0, 0.0);
+	Eigen::Vector2d goal_point(5.0, 8.0);
+	Eigen::Vector2d current_point(start_point(0), start_point(1));
+	double distance = hdi_plan_utils::get_distance_2d(start_point, goal_point);
+	double velocity = 1;
+	double period = 1;
+	int human_id = 2;
+	int count = 0;
+	ROS_INFO("###Generate Obstacle: Start to spawn a moving obstacle 2.");
+	while (hdi_plan_utils::get_distance_2d(current_point, goal_point) > 0.5 * period * velocity) {
+		if (count > 0) update_human_obstacle_pub_.publish(get_obstacle_message(false, human_id));
+
+		current_point(0) = (goal_point(0) - start_point(0)) * (velocity * count * period) / distance + start_point(0);
+		current_point(1) = (goal_point(1) - start_point(1)) * (velocity * count * period) / distance + start_point(1);
+
+		update_human_obstacle_pub_.publish(get_obstacle_message(true, human_id, current_point(0), current_point(1)));
+		if (count > 0) human_movement_pub_.publish(get_obstacle_message(true, human_id, current_point(0), current_point(1)));
 
 		ros::Duration(period).sleep();
 		count += 1;
 	}
 }
+
 }
 /*
 

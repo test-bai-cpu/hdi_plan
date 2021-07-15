@@ -66,10 +66,10 @@ double MotionPlanner::distance_function(const std::shared_ptr<RRTNode>& a, const
 
 void MotionPlanner::setup() {
     //Eigen::Vector3d start_position(0,0,5);
-    Eigen::Vector3d start_position(1,8,2);
+    Eigen::Vector3d start_position(1,1,2);
     this->start_ = std::make_shared<RRTNode>(start_position, 0);
     //Eigen::Vector3d goal_position(20,20,5);
-    Eigen::Vector3d goal_position(20,8,2);
+    Eigen::Vector3d goal_position(20,1,2);
     this->goal_ = std::make_shared<RRTNode>(goal_position, this->total_plan_time_);
     this->goal_->set_lmc(0);
     this->goal_->set_g_cost(0);
@@ -161,9 +161,28 @@ void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr 
     }
 }
 
+int MotionPlanner::get_human_id(const std::string human_name) {
+	std::string delimiter = "_";
+	std::string human_id_str = human_name.substr(human_name.find(delimiter)+1, human_name.find(delimiter) + delimiter.length()+1);
+	int human_id = std::stoi(human_id_str);
+	return human_id;
+}
+
 void MotionPlanner::obstacle_info_callback(const hdi_plan::obstacle_info::ConstPtr &msg) {
 	Obstacle_type obstacle_type = static_cast<Obstacle_type>(msg->type);
 	if (obstacle_type == hdi_plan::Obstacle_type::human) {
+		int human_id = this->get_human_id(msg->name);
+		if (std::find(this->human_id_list_.begin(), this->human_id_list_.end(),human_id)!=this->human_id_list_.end()) {
+			return;
+		}
+		std::cout << "Initialize human_" << human_id << " now." << std::endl;
+		this->human_id_list_.push_back(human_id);
+		this->exist_human_ = true;
+		ros::Time human_start_time = ros::Time::now();
+		std::cout << "The human_" << human_id  << " start time is: " << static_cast<double>((human_start_time - this->start_time_).toSec()) << std::endl;
+		Eigen::Vector2d human_start_position(msg->position.x, msg->position.y);
+		this->human_map_[human_id] = std::make_shared<Human>(human_start_position, human_id, static_cast<double>((human_start_time - this->start_time_).toSec()));
+		std::cout << "Human map size is " << this->human_map_.size() << std::endl;
 		return;
 	}
 
@@ -195,27 +214,20 @@ void MotionPlanner::human_movement_callback_region_version(const geometry_msgs::
 	this->human_vector_.push(human_position);
 }*/
 
-void MotionPlanner::human_movement_callback(const geometry_msgs::Point::ConstPtr &msg) {
-	if (!this->exist_human_) {
-		Eigen::Vector2d human_start_position(msg->x, msg->y);
-		ros::Time human_start_time = ros::Time::now();
-		std::cout << "Human start time is: " << static_cast<double>((human_start_time - this->start_time_).toSec()) << std::endl;
-		this->human_ = std::make_shared<Human>(human_start_position, static_cast<double>((human_start_time - this->start_time_).toSec()));
-		this->exist_human_ = true;
-		this->human_callback_count += 1;
-	} else if (this->human_callback_count == 1)
-	{
-		Eigen::Vector2d human_position(msg->x, msg->y);
-		this->human_->second_position_ = human_position;
-		this->human_->if_move_ = true;
-		this->human_callback_count += 1;
+void MotionPlanner::human_movement_callback(const hdi_plan::obstacle_info::ConstPtr &msg) {
+	int human_id = this->get_human_id(msg->name);
+	if (!this->human_map_[human_id]->get_if_move()) {
+		std::cout << "To get second pos of human_" << human_id << " ." << std::endl;
+		Eigen::Vector2d human_position(msg->position.x, msg->position.y);
+		this->human_map_[human_id]->set_second_position(human_position);
+		this->human_map_[human_id]->set_if_move(true);
 	}
 }
 
 bool MotionPlanner::solve() {
 	ros::Duration(0.1).sleep();
     this->iteration_count += 1;
-    std::cout << "The iteration number is: " << this->iteration_count << "The nodes number is: " << static_cast<double>(this->nearest_neighbors_tree_->size()) << std::endl;
+    //std::cout << "The iteration number is: " << this->iteration_count << "The nodes number is: " << static_cast<double>(this->nearest_neighbors_tree_->size()) << std::endl;
     /*
     if(!this->position_ready) {
         ROS_INFO("Set to start position");
@@ -286,12 +298,14 @@ void MotionPlanner::update_obstacle() {
 			add_obstacle = true;
 		}
 	}
-	
-	if (this->exist_human_ && this->human_->if_move_ && !this->if_add_human_) {
-		ROS_INFO("Add moving human as an obstacle.");
-		this->add_human_as_obstacle();
-		add_obstacle = true;
-		this->if_add_human_ = true;
+
+	for (auto human : this->human_map_) {
+		if (!human.second->get_if_add()) {
+			std::cout << "Adding human_" << human.first << " as an obstacle." << std::endl;
+			this->add_human_as_obstacle(human.first);
+			add_obstacle = true;
+			human.second->set_if_add(true);
+		}
 	}
 
 	if (add_obstacle) {
@@ -346,8 +360,10 @@ bool MotionPlanner::check_if_node_inside_obstacle(const std::shared_ptr<Obstacle
 }
 
 bool MotionPlanner::check_if_node_inside_all_obstacles(const std::shared_ptr<RRTNode>& node, bool consider_human) {
-	if (consider_human && this->exist_human_ && this->human_->check_if_node_inside_human(node)) {
-		return true;
+	if (consider_human && this->exist_human_) {
+		for (auto human : this->human_map_) {
+			if (human.second->check_if_node_inside_human(node)) return true;
+		}
 	}
 
 	bool result = std::any_of(this->obstacle_map.begin(), this->obstacle_map.end(), [this, node](auto obstacle){
@@ -358,11 +374,10 @@ bool MotionPlanner::check_if_node_inside_all_obstacles(const std::shared_ptr<RRT
 
 	/*
 	for (auto obstacle : this->obstacle_map) {
-		if (this->check_if_node_inside_obstacle(obstacle.second, node)) {
-			return true;
-		}
+		if (this->check_if_node_inside_obstacle(obstacle.second, node)) return true;
 	}
-	return false;*/
+	return false;
+	*/
 }
 
 /*
@@ -404,13 +419,13 @@ void MotionPlanner::add_human_as_obstacle(const Eigen::Vector2d& human_position)
 	}
 }*/
 
-void MotionPlanner::add_human_as_obstacle() {
+void MotionPlanner::add_human_as_obstacle(int human_id) {
 	std::vector<std::shared_ptr<RRTNode>> nodes_list;
 	this->nearest_neighbors_tree_->list(nodes_list);
 
 	for (auto it = nodes_list.begin(); it != nodes_list.end(); ++it) {
 		std::shared_ptr<RRTNode> node = *it;
-		if (!this->human_->check_if_node_inside_human(node)) {
+		if (!this->human_map_[human_id]->check_if_node_inside_human(node)) {
 			continue;
 		}
 		std::cout << "The colliding with human node position is: " << node->get_state() << std::endl;
@@ -528,16 +543,16 @@ bool MotionPlanner::update_solution_path() {
 }
 
 void MotionPlanner::optimize_solution_path() {
-	ros::WallTime chomp_start_time = ros::WallTime::now();
+	ros::Time chomp_start_time = ros::Time::now();
 	ROS_INFO("Found the solution path, start to optimize");
 	//std::cout << "The solution path contains: " << this->solution_path.size() << " points" << std::endl;
 	//std::cout << "The obstacle number is " << this->obstacle_map.size() << std::endl;
-	auto chomp_trajectory = std::make_shared<ChompTrajectory>(this->solution_path);
-	//std::cout << "The obstacle number is " << this->obstacle_map.size() << std::endl;
-	auto chomp = std::make_shared<Chomp>(chomp_trajectory, this->obstacle_map);
+	//std::cout << "The dynamic obstacle number is " << this->human_map_.size() << std::endl;
+	auto chomp_trajectory = std::make_shared<ChompTrajectory>(this->solution_path, static_cast<double>((chomp_start_time - this->start_time_).toSec()), this->total_plan_time_);
+	auto chomp = std::make_shared<Chomp>(chomp_trajectory, this->obstacle_map, this->human_map_);
 	std::vector<Eigen::Vector3d> optimized_trajectory = chomp->get_optimized_trajectory();
 
-	double chomp_process_time = (ros::WallTime::now() - chomp_start_time).toSec();
+	double chomp_process_time = (ros::Time::now() - chomp_start_time).toSec();
 	std::cout << "The optimization time is: " << chomp_process_time << std::endl;
 
 	hdi_plan::point_array trajectory_msg;
@@ -732,6 +747,7 @@ bool MotionPlanner::edge_in_free_space_check(const std::shared_ptr<RRTNode>& nod
     return result;
 }
 
+/*
 bool MotionPlanner::check_if_edge_collide_human(const std::shared_ptr<RRTNode>& node1, const std::shared_ptr<RRTNode>& node2) {
 	bool result = false;
 	if (node1 && this->human_->check_if_node_inside_human(node1)) {
@@ -743,7 +759,7 @@ bool MotionPlanner::check_if_edge_collide_human(const std::shared_ptr<RRTNode>& 
 	if (result) ROS_INFO("########################The edge collides with human");
 	//bool result = (this->human_->check_if_node_inside_human(node1)) || (this->human_->check_if_node_inside_human(node2));
 	return result;
-}
+}*/
 
 void MotionPlanner::calculateRRG() {
     auto num_of_nodes_in_tree = static_cast<double>(this->nearest_neighbors_tree_->size());

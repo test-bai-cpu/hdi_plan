@@ -2,11 +2,11 @@
 
 namespace hdi_plan {
 
-Chomp::Chomp(const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<std::string,
-			 std::shared_ptr<Obstacle>>& obstacle_map) {
+Chomp::Chomp(const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<std::string, std::shared_ptr<Obstacle>>& obstacle_map, const std::map<int, std::shared_ptr<Human>>& human_map) {
 	//ROS_INFO("Start in the chomp");
 	this->full_trajectory_ = trajectory;
 	this->obstacle_map_ = obstacle_map;
+	this->human_map_ = human_map;
 	this->initialize();
 	bool res = this->optimize();
 	if (!res) ROS_WARN("Failed to find a collision free chomp solution");
@@ -47,6 +47,7 @@ void Chomp::initialize() {
 	// allocate memory for matrices:
 	this->smoothness_increments_ = Eigen::MatrixXd::Zero(this->num_vars_free_, this->num_joints_);
 	this->collision_increments_ = Eigen::MatrixXd::Zero(this->num_vars_free_, this->num_joints_);
+	this->dynamic_collision_increments_ = Eigen::MatrixXd::Zero(this->num_vars_free_, this->num_joints_);
 	this->final_increments_ = Eigen::MatrixXd::Zero(this->num_vars_free_, this->num_joints_);
 	this->smoothness_derivative_ = Eigen::VectorXd::Zero(this->num_vars_all_);
 
@@ -58,6 +59,8 @@ void Chomp::initialize() {
 	this->collision_point_potential_.resize(this->num_vars_all_);
 	this->collision_point_potential_gradient_.resize(this->num_vars_all_);
 
+	this->dynamic_collision_point_potential_.resize(this->num_vars_all_);
+	this->dynamic_collision_point_potential_gradient_.resize(this->num_vars_all_);
 	//this->jacobian_ = Eigen::MatrixXd::Zero(3, 1);
 	//this->jacobian_pseudo_inverse_ = Eigen::MatrixXd::Zero(1, 3);
 	//this->jacobian_jacobian_tranpose_ = Eigen::MatrixXd::Zero(3, 3);
@@ -72,8 +75,9 @@ bool Chomp::optimize() {
 		//std::cout << "The iteration number is: " << this->iteration_ << std::endl;
 		perform_forward_kinematics();
 		double c_cost = this->get_collision_cost();
+		double d_cost = this->get_dynamic_collision_cost();
 		double s_cost = this->get_smoothness_cost();
-		double cost = c_cost + s_cost;
+		double cost = c_cost + d_cost + s_cost;
 
 		if (this->iteration_ == 0 || cost < this->best_trajectory_cost_) {
 			this->best_trajectory_ = this->full_trajectory_->get_trajectory();
@@ -83,6 +87,7 @@ bool Chomp::optimize() {
 
 		this->calculate_smoothness_increments();
 		this->calculate_collision_increments();
+		this->calculate_dynamic_collision_increments();
 		this->calculate_total_increments();
 		this->add_increments_to_trajectory();
 
@@ -134,8 +139,10 @@ void Chomp::perform_forward_kinematics() {
 
 	for (int i = start; i <= end; i++) {
 		this->collision_point_potential_[i] = this->get_potential(this->collision_point_pos_[i]);
+		this->dynamic_collision_point_potential_[i] = this->get_dynamic_potential(this->collision_point_pos_[i], i);
 		// Todo: How to calculate the potential gradient
 		this->collision_point_potential_gradient_[i] = Eigen::Vector3d(1,1,1);
+		this->dynamic_collision_point_potential_gradient_[i] = Eigen::Vector3d(1,1,1);
 	}
 
 	for (int i = this->free_vars_start_; i <= this->free_vars_end_; i++) {
@@ -175,6 +182,32 @@ double Chomp::get_potential(const Eigen::Vector3d& point) {
 	}
 }
 
+double Chomp::get_dynamic_potential(const Eigen::Vector3d& point, const int index) {
+	double distance_to_nearest_dynamic_obstacle = std::numeric_limits<double>::infinity();
+	double point_time = this->full_trajectory_->calculate_time_by_index(index);
+	for (auto human : this->human_map_) {
+		Eigen::Vector2d predicted_position = human.second->predict_path(point_time);
+		Eigen::Vector2d point_position(point(0), point(1));
+		double distance = hdi_plan_utils::get_distance_2d(point_position, predicted_position) -
+						  this->drone_radius_ - (human.second->get_human_block_distance()/2.0);
+		if (distance < distance_to_nearest_dynamic_obstacle) distance_to_nearest_dynamic_obstacle = distance;
+	}
+
+	double potential;
+	if (distance_to_nearest_dynamic_obstacle >= this->min_clearence_) {
+		potential = 0.0;
+	} else if (distance_to_nearest_dynamic_obstacle >= 0.0) {
+		const double diff = distance_to_nearest_dynamic_obstacle - this->min_clearence_;
+		const double gradient_magnitude = diff / this->min_clearence_;
+		potential = 0.5 * gradient_magnitude * diff;
+	} else {
+		this->is_collsion_free_ = false;
+		potential = -distance_to_nearest_dynamic_obstacle + 0.5 * this->min_clearence_;
+	}
+
+	return potential * exp(-dynamic_collision_factor_ * point_time);
+}
+
 double Chomp::get_collision_cost() {
 	double collision_cost = 0.0;
 	double worst_collision_cost = 0.0;
@@ -190,8 +223,23 @@ double Chomp::get_collision_cost() {
 		}
 	}
 	return this->obstacle_cost_weight_ * collision_cost;
+}
 
+double Chomp::get_dynamic_collision_cost() {
+	double collision_cost = 0.0;
+	double worst_collision_cost = 0.0;
+	this->worst_dynamic_collision_cost_state_ = -1;
 
+	for (int i=this->free_vars_start_; i<this->free_vars_end_; i++) {
+		double state_collision_cost = this->dynamic_collision_point_potential_[i] * this->collision_point_vel_mag_[i];
+		collision_cost += state_collision_cost;
+		if (state_collision_cost > worst_collision_cost)
+		{
+			worst_collision_cost = state_collision_cost;
+			this->worst_dynamic_collision_cost_state_ = i;
+		}
+	}
+	return this->dynamic_obstacle_cost_weight_ * collision_cost;
 }
 
 double Chomp::get_smoothness_cost() {
@@ -261,6 +309,48 @@ void Chomp::calculate_collision_increments() {
 	}*/
 }
 
+void Chomp::calculate_dynamic_collision_increments() {
+	double potential;
+	double vel_mag_sq;
+	double vel_mag;
+	Eigen::Vector3d potential_gradient;
+	Eigen::Vector3d normalized_velocity;
+	Eigen::Matrix3d orthogonal_projector;
+	Eigen::Vector3d curvature_vector;
+	Eigen::Vector3d cartesian_gradient;
+
+	this->dynamic_collision_increments_.setZero(this->num_vars_free_, this->num_joints_);
+
+	int start_point = this->free_vars_start_;
+	int end_point = this->free_vars_end_;
+	if (this->use_stochastic_descent_) {
+		start_point = static_cast<int>(hdi_plan_utils::get_random_double() *
+									   (this->free_vars_end_ - this->free_vars_start_) + this->free_vars_start_);
+		end_point = start_point;
+	}
+
+
+	for (int i = start_point; i <= end_point; i++) {
+		for (int j = 0; j < this->num_joints_; j++) {
+
+		}
+		potential = dynamic_collision_point_potential_[i];
+		if (potential < 0.0001)
+			continue;
+		potential_gradient = -dynamic_collision_point_potential_gradient_[i];
+		vel_mag = collision_point_vel_mag_[i];
+		vel_mag_sq = vel_mag * vel_mag;
+
+		normalized_velocity = this->collision_point_vel_[i] / vel_mag;
+		orthogonal_projector = Eigen::Matrix3d::Identity() - (normalized_velocity * normalized_velocity.transpose());
+		curvature_vector = (orthogonal_projector * this->collision_point_acc_[i]) / vel_mag_sq;
+		cartesian_gradient = vel_mag * (orthogonal_projector * potential_gradient - potential * curvature_vector);
+
+		this->dynamic_collision_increments_.row(i - this->free_vars_start_).transpose() -=
+				Eigen::MatrixXd::Identity(3, 3) * cartesian_gradient;
+	}
+}
+
 /*
 void Chomp::get_jacobian(int trajectory_point, const Eigen::Vector3d &collision_point_pos) {
 	if (isParent(joint_name, joint_names_[j]))
@@ -285,7 +375,8 @@ void Chomp::calculate_total_increments() {
 		this->final_increments_.col(i) = this->learning_rate_ * (
 				this->joint_costs_[i]->getQuadraticCostInverse() *
 						(this->smoothness_cost_weight_ * this->smoothness_increments_.col(i) +
-						 this->obstacle_cost_weight_ * this->collision_increments_.col(i)));
+						 this->obstacle_cost_weight_ * this->collision_increments_.col(i) +
+						 this->dynamic_obstacle_cost_weight_ * this->dynamic_collision_increments_.col(i)));
 	}
 }
 

@@ -18,7 +18,7 @@ PublishTrajectory::PublishTrajectory(const ros::NodeHandle &nh, const ros::NodeH
 
 	quadrotor_state_sub_ = nh_.subscribe("hdi_plan/quadrotor_state", 1, &PublishTrajectory::quadrotor_state_callback, this);
 
-	Eigen::Vector3d goal_state(20,8,2);
+	Eigen::Vector3d goal_state(20,1,2);
 	this->goal_state_ = goal_state;
 
 	ros::Duration(5.0).sleep();
@@ -48,7 +48,7 @@ void PublishTrajectory::start_quadrotor_bridge() {
 
 	geometry_msgs::PoseStamped go_to_pose_msg;
 	go_to_pose_msg.pose.position.x = 1.0;
-	go_to_pose_msg.pose.position.y = 8.0;
+	go_to_pose_msg.pose.position.y = 1.0;
 	go_to_pose_msg.pose.position.z = 2.0;
 	
 	this->pub_solution_path_.publish(go_to_pose_msg);
@@ -90,9 +90,9 @@ void PublishTrajectory::trajectory_callback(const hdi_plan::point_array::ConstPt
 		go_to_pose_msg.pose.position.z = msg->points[i].z;
 		//this->go_to_pose_pub_.publish(go_to_pose_msg);
 		this->pub_solution_path_.publish(go_to_pose_msg);
-		std::cout << "The executed position is: " << msg->points[i].x << " " << msg->points[i].y << " " << msg->points[i].z << std::endl;
+		//std::cout << "The executed position is: " << msg->points[i].x << " " << msg->points[i].y << " " << msg->points[i].z << std::endl;
 		this->executed_path_file << msg->points[i].x << " " << msg->points[i].y << " " << msg->points[i].z << "\n";
-		ros::Duration(0.5).sleep();
+		ros::Duration(0.7).sleep();
 	}
 }
 

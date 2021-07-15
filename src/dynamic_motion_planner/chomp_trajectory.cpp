@@ -1,7 +1,9 @@
 #include "dynamic_motion_planner/chomp_trajectory.hpp"
 
 namespace hdi_plan {
-ChompTrajectory::ChompTrajectory(const std::vector<Eigen::Vector3d>& trajectory_points) {
+ChompTrajectory::ChompTrajectory(const std::vector<Eigen::Vector3d>& trajectory_points, const double start_time, const double end_time) {
+	this->start_time_ = start_time;
+	this->end_time_ = end_time;
 	this->trajectory_points_ = trajectory_points;
 	this->calculate_duration_and_points_num_for_full_trajectory();
 	this->update_trajectory_for_diff();
@@ -14,6 +16,11 @@ ChompTrajectory::ChompTrajectory(const Eigen::Vector3d& start_point, const Eigen
 }
 
 ChompTrajectory::~ChompTrajectory() = default;
+
+double ChompTrajectory::calculate_time_by_index(int index) {
+	// the index starts from 0
+	return index * this->discretization_ + this->start_time_;
+}
 
 void ChompTrajectory::update_trajectory_for_diff() {
 	int diff_rule_length = hdi_plan_utils::DIFF_RULE_LENGTH;
@@ -120,7 +127,6 @@ Eigen::Vector3d ChompTrajectory::calculate_position_by_index(int index) {
 	Eigen::Vector3d index_point(x,y,z);
 
 	return index_point;
-
 }
 
 void ChompTrajectory::add_increments_to_trajectory(Eigen::MatrixXd::ColXpr increment, int joint_number, double scale) {

@@ -9,26 +9,29 @@ PublishTrajectory::PublishTrajectory(const ros::NodeHandle &nh, const ros::NodeH
 	arm_bridge_pub_ = nh_.advertise<std_msgs::Bool>("bridge/arm", 1);
 	start_pub_ = nh_.advertise<std_msgs::Empty>("autopilot/start", 1);
 
-	go_to_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("autopilot/pose_command", 100);
+	//go_to_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("autopilot/pose_command", 100);
 	trajectory_pub_ = nh_.advertise<quadrotor_msgs::Trajectory>("autopilot/trajectory", 1);
-	max_velocity_pub_ = nh_.advertise<std_msgs::Float64>("autopilot/max_velocity", 1);
-	trajectory_sub_ = nh_.subscribe("hdi_plan/full_trajectory", 1, &PublishTrajectory::trajectory_callback, this);
+	//max_velocity_pub_ = nh_.advertise<std_msgs::Float64>("autopilot/max_velocity", 1);
+	//trajectory_sub_ = nh_.subscribe("hdi_plan/full_trajectory", 1, &PublishTrajectory::trajectory_callback, this);
 	pub_solution_path_ = nh_.advertise<geometry_msgs::PoseStamped>("autopilot/pose_command", 1);
-	get_new_path_sub_ = nh_.subscribe("hdi_plan/get_new_path", 1, &PublishTrajectory::get_new_path_callback, this);
+	//get_new_path_sub_ = nh_.subscribe("hdi_plan/get_new_path", 1, &PublishTrajectory::get_new_path_callback, this);
 
-	quadrotor_state_sub_ = nh_.subscribe("hdi_plan/quadrotor_state", 1, &PublishTrajectory::quadrotor_state_callback, this);
+	//quadrotor_state_sub_ = nh_.subscribe("hdi_plan/quadrotor_state", 1, &PublishTrajectory::quadrotor_state_callback, this);
 
 	ros::Duration(9.0).sleep();
 	start_quadrotor_bridge();
+	ros::Duration(9.0).sleep();
+	ROS_INFO("Start to publish the trajectory!!!");
+	publish_trajectory();
 
 }
 
 PublishTrajectory::~PublishTrajectory() {}
 
 void PublishTrajectory::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg) {
-	quadrotor_state(0) = msg->pose.pose.position.x;
-	quadrotor_state(1) = msg->pose.pose.position.y;
-	quadrotor_state(2) = msg->pose.pose.position.z;
+	quadrotor_state_(0) = msg->pose.pose.position.x;
+	quadrotor_state_(1) = msg->pose.pose.position.y;
+	quadrotor_state_(2) = msg->pose.pose.position.z;
 }
 
 void PublishTrajectory::start_quadrotor_bridge() {
@@ -44,8 +47,8 @@ void PublishTrajectory::start_quadrotor_bridge() {
 	ROS_INFO("Go to pose msg");
 	geometry_msgs::PoseStamped go_to_pose_msg;
 	go_to_pose_msg.pose.position.x = 0.0;
-	go_to_pose_msg.pose.position.y = 4.0;
-	go_to_pose_msg.pose.position.z = 1.0;
+	go_to_pose_msg.pose.position.y = 2.0;
+	go_to_pose_msg.pose.position.z = 2.0;
 	
 	this->pub_solution_path_.publish(go_to_pose_msg);
 }
@@ -53,7 +56,7 @@ void PublishTrajectory::start_quadrotor_bridge() {
 void PublishTrajectory::get_new_path_callback(const std_msgs::Bool::ConstPtr &msg) {
 	this->if_get_new_path_ = msg->data;
 }
-
+/*
 void PublishTrajectory::trajectory_callback(const hdi_plan::point_array::ConstPtr &msg) {
 	ROS_INFO("In the trajectory callback");
 	int trajectory_size = msg->points.size();
@@ -64,11 +67,6 @@ void PublishTrajectory::trajectory_callback(const hdi_plan::point_array::ConstPt
 	trajectory_msg.type = trajectory_msg.GENERAL;
 
 	for (int i = 0; i < trajectory_size; i++) {
-		if (this->if_get_new_path_) {
-			ROS_INFO("Now break the previous callback");
-			break;
-		}
-		quadrotor_common::TrajectoryPoint point1 = quadrotor_common::TrajectoryPoint();
 		quadrotor_msgs::TrajectoryPoint point;
 		geometry_msgs::Point point_msg;
 		point_msg.x = msg->points[i].x;
@@ -79,6 +77,30 @@ void PublishTrajectory::trajectory_callback(const hdi_plan::point_array::ConstPt
 	}
 
 	this->trajectory_pub_.publish(trajectory_msg);
+}*/
+
+void PublishTrajectory::publish_trajectory() {
+	ROS_INFO("check into publish trajectory");
+	std::vector<Eigen::Vector3d> optimized_trajectory;
+	for (int i = 1; i < 11; i++) {
+		Eigen::Vector3d point1(i, 2, 2);
+		optimized_trajectory.push_back(point1);
+	}
+
+	int trajectory_size = optimized_trajectory.size();
+	geometry_msgs::PoseStamped go_to_pose_msg;
+	for (int i = 0; i < trajectory_size; i++) {
+		Eigen::Vector3d point = optimized_trajectory.at(i);
+		go_to_pose_msg.pose.position.x = point(0);
+		go_to_pose_msg.pose.position.y = point(1);
+		go_to_pose_msg.pose.position.z = point(2);
+		this->pub_solution_path_.publish(go_to_pose_msg);
+		ros::Duration(0.7).sleep();
+	}
+	/*
+	std_msgs::Bool get_new_path_msg;
+	get_new_path_msg.data = true;
+	this->pub_get_new_path_.publish(get_new_path_msg);*/
 }
 
 }

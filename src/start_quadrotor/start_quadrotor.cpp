@@ -78,7 +78,7 @@ void StartQuadrotor::obstacle_callback(const hdi_plan::obstacle_info::ConstPtr &
 			break;
 		}
 		case Obstacle_type::human: {
-			std::cout << "human" << std::endl;
+			//std::cout << "human" << std::endl;
 			prefab_id = "Sphere";
 			break;
 		}

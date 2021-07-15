@@ -15,12 +15,13 @@
 #include "dynamic_motion_planner/chomp_trajectory.hpp"
 #include "dynamic_motion_planner/chomp_cost.hpp"
 #include "generate_dynamic_scene/obstacle.hpp"
+#include "generate_dynamic_scene/human.hpp"
 #include "utils/utility_functions.hpp"
 
 namespace hdi_plan {
 class Chomp {
 public:
-	Chomp(const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<std::string, std::shared_ptr<Obstacle>>& obstacle_map);
+	Chomp(const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<std::string, std::shared_ptr<Obstacle>>& obstacle_map, const std::map<int, std::shared_ptr<Human>>& human_map);
 	~Chomp();
 
 	std::vector<Eigen::Vector3d> get_optimized_trajectory() const {
@@ -53,6 +54,7 @@ private:
 	// matrix
 	Eigen::MatrixXd smoothness_increments_;
 	Eigen::MatrixXd collision_increments_;
+	Eigen::MatrixXd dynamic_collision_increments_;
 	Eigen::MatrixXd final_increments_;
 
 	// temporary variables
@@ -77,6 +79,11 @@ private:
 	void get_collision_point_pos();
 	//void get_jacobian(int trajectory_point, const Eigen::Vector3d& collision_point_pos);
 
+	// dynamic collision cost
+	std::map<int, std::shared_ptr<Human>> human_map_;
+	std::vector<double> dynamic_collision_point_potential_;
+	std::vector<Eigen::Vector3d> dynamic_collision_point_potential_gradient_;
+	double get_dynamic_potential(const Eigen::Vector3d& point, const int index);
 
 	// optimize process
 	void initialize();
@@ -86,12 +93,15 @@ private:
 	void perform_forward_kinematics();
 	double get_collision_cost();
 	double get_smoothness_cost();
+	double get_dynamic_collision_cost();
 	void calculate_smoothness_increments();
 	void calculate_collision_increments();
+	void calculate_dynamic_collision_increments();
 	void calculate_total_increments();
 	void add_increments_to_trajectory();
 
 	int worst_collision_cost_state_{-1};
+	int worst_dynamic_collision_cost_state_{-1};
 
 	// parameters
 	double planning_time_limit_{60.0};
@@ -99,6 +109,8 @@ private:
 	int max_iterations_after_collision_free_{15};
 	double smoothness_cost_weight_{0.5};
 	double obstacle_cost_weight_{0.1};
+	double dynamic_obstacle_cost_weight_{0.1};
+	double dynamic_collision_factor_{0.1};
 	double learning_rate_{0.1};
 	double smoothness_cost_velocity_{0.0};
 	double smoothness_cost_acceleration_{1.0};

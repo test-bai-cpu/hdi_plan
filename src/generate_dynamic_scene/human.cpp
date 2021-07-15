@@ -1,8 +1,8 @@
 #include "generate_dynamic_scene/human.hpp"
 
 namespace hdi_plan {
-Human::Human(Eigen::Vector2d start_position, double start_time)
-		: start_position_(start_position), start_time_(start_time) {
+Human::Human(Eigen::Vector2d start_position, int human_id, double start_time)
+		: start_position_(start_position), human_id_(human_id), start_time_(start_time) {
 
 }
 

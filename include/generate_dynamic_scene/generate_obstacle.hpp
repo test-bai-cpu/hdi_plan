@@ -55,10 +55,11 @@ private:
 	ros::Publisher pub_optimized_path_;
 	ros::Publisher pub_get_new_path_;
 
-    void publish_human_movement();
+    void publish_human_movement_1();
+	void publish_human_movement_2();
 	void publish_obstacle();
     double get_distance(const Eigen::Vector2d &point1, const Eigen::Vector2d &point2);
-    hdi_plan::obstacle_info get_obstacle_message(bool operation, double position_x = 100.0, double position_y = 100.0);
+    hdi_plan::obstacle_info get_obstacle_message(bool operation, int human_id, double position_x = 100.0, double position_y = 100.0);
     //void publish_trajectory();
 };
 }

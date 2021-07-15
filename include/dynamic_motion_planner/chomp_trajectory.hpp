@@ -11,7 +11,7 @@
 namespace hdi_plan {
 class ChompTrajectory {
 public:
-	ChompTrajectory(const std::vector<Eigen::Vector3d>& trajectory_points);
+	ChompTrajectory(const std::vector<Eigen::Vector3d>& trajectory_points, const double start_time, const double end_time);
 	ChompTrajectory(const Eigen::Vector3d& start_point, const Eigen::Vector3d& end_point);
 	~ChompTrajectory();
 
@@ -76,7 +76,11 @@ public:
 
 	void add_increments_to_trajectory(Eigen::MatrixXd::ColXpr increment, int joint_number, double scale);
 
+	double calculate_time_by_index(int index);
 private:
+	double start_time_;
+	double end_time_;
+
 	std::vector<Eigen::Vector3d> trajectory_points_;
 	Eigen::MatrixXd trajectory_;
 	double duration_;
