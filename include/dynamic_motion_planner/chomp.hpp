@@ -8,6 +8,8 @@
 #include <limits>
 #include <vector>
 #include <memory>
+#include <iostream>
+#include <fstream>
 
 #include <ros/ros.h>
 
@@ -77,13 +79,19 @@ private:
 
 	double get_potential(const Eigen::Vector3d& point);
 	void get_collision_point_pos();
+	Eigen::Vector3d get_distance_gradient(const Eigen::Vector3d& point);
+	double get_potential_for_gradient(double x, double y, double z);
+	void export_potential_data(bool if_dynamic);
+	void export_potential_gradient_data(bool if_dynamic);
 	//void get_jacobian(int trajectory_point, const Eigen::Vector3d& collision_point_pos);
 
 	// dynamic collision cost
 	std::map<int, std::shared_ptr<Human>> human_map_;
 	std::vector<double> dynamic_collision_point_potential_;
 	std::vector<Eigen::Vector3d> dynamic_collision_point_potential_gradient_;
-	double get_dynamic_potential(const Eigen::Vector3d& point, const int index);
+	double get_dynamic_potential(const Eigen::Vector3d& point, int index);
+	Eigen::Vector3d get_dynamic_distance_gradient(const Eigen::Vector3d& point, int index);
+	double get_dynamic_potential_for_gradient(double x, double y, double z, int index);
 
 	// optimize process
 	void initialize();

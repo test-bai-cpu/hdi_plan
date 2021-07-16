@@ -11,6 +11,10 @@ Chomp::Chomp(const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<
 	bool res = this->optimize();
 	if (!res) ROS_WARN("Failed to find a collision free chomp solution");
 	this->convert_matrix_to_trajectory_points_vector();
+	this->export_potential_data(true);
+	this->export_potential_data(false);
+	this->export_potential_gradient_data(true);
+	this->export_potential_gradient_data(false);
 }
 
 Chomp::~Chomp() = default;
@@ -139,10 +143,9 @@ void Chomp::perform_forward_kinematics() {
 
 	for (int i = start; i <= end; i++) {
 		this->collision_point_potential_[i] = this->get_potential(this->collision_point_pos_[i]);
+		this->collision_point_potential_gradient_[i] = this->get_distance_gradient(this->collision_point_pos_[i]);
 		this->dynamic_collision_point_potential_[i] = this->get_dynamic_potential(this->collision_point_pos_[i], i);
-		// Todo: How to calculate the potential gradient
-		this->collision_point_potential_gradient_[i] = Eigen::Vector3d(1,1,1);
-		this->dynamic_collision_point_potential_gradient_[i] = Eigen::Vector3d(1,1,1);
+		this->dynamic_collision_point_potential_gradient_[i] = this->get_dynamic_distance_gradient(this->collision_point_pos_[i], i);
 	}
 
 	for (int i = this->free_vars_start_; i <= this->free_vars_end_; i++) {
@@ -161,6 +164,27 @@ void Chomp::perform_forward_kinematics() {
 		this->collision_point_vel_mag_[i] = this->collision_point_vel_[i].norm();
 	}
 }
+
+Eigen::Vector3d Chomp::get_distance_gradient(const Eigen::Vector3d& point) {
+	double resolution = 0.01;
+	double inv_twice_resolution = 1.0 / (2.0 * resolution);
+	double gradient_x = (this->get_potential_for_gradient(point(0) + resolution, point(1), point(2)) - this->get_potential_for_gradient(point(0) - resolution, point(1), point(2))) * inv_twice_resolution;
+	double gradient_y = (this->get_potential_for_gradient(point(0), point(1) + resolution, point(2)) - this->get_potential_for_gradient(point(0), point(1) - resolution, point(2))) * inv_twice_resolution;
+	double gradient_z = (this->get_potential_for_gradient(point(0), point(1), point(2) + resolution) - this->get_potential_for_gradient(point(0), point(1), point(2) - resolution)) * inv_twice_resolution;
+	Eigen::Vector3d gradient(gradient_x, gradient_y, gradient_z);
+	return gradient;
+}
+
+Eigen::Vector3d Chomp::get_dynamic_distance_gradient(const Eigen::Vector3d& point, int index) {
+	double resolution = 0.01;
+	double inv_twice_resolution = 1.0 / (2.0 * resolution);
+	double gradient_x = (this->get_dynamic_potential_for_gradient(point(0) + resolution, point(1), point(2), index) - this->get_dynamic_potential_for_gradient(point(0) - resolution, point(1), point(2), index)) * inv_twice_resolution;
+	double gradient_y = (this->get_dynamic_potential_for_gradient(point(0), point(1) + resolution, point(2), index) - this->get_dynamic_potential_for_gradient(point(0), point(1) - resolution, point(2), index)) * inv_twice_resolution;
+	double gradient_z = (this->get_dynamic_potential_for_gradient(point(0), point(1), point(2) + resolution, index) - this->get_dynamic_potential_for_gradient(point(0), point(1), point(2) - resolution, index)) * inv_twice_resolution;
+	Eigen::Vector3d gradient(gradient_x, gradient_y, gradient_z);
+	return gradient;
+}
+
 
 double Chomp::get_potential(const Eigen::Vector3d& point) {
 	double distance_to_nearest_obstacle = std::numeric_limits<double>::infinity();
@@ -182,7 +206,70 @@ double Chomp::get_potential(const Eigen::Vector3d& point) {
 	}
 }
 
-double Chomp::get_dynamic_potential(const Eigen::Vector3d& point, const int index) {
+void Chomp::export_potential_data(bool if_dynamic) {
+	std::string file_name = "potential.txt";
+	if (if_dynamic) file_name = "dynamic_potential.txt";
+
+	std::ofstream data_file (file_name);
+
+	if (if_dynamic) {
+		for (auto potential : this->dynamic_collision_point_potential_) {
+			data_file << potential << "\n";
+		}
+	} else {
+		for (auto potential : this->collision_point_potential_) {
+			data_file << potential << "\n";
+		}
+	}
+
+	if (data_file.is_open()) {
+		data_file.close();
+	}
+}
+
+void Chomp::export_potential_gradient_data(bool if_dynamic) {
+	std::string file_name = "potential_gradient.txt";
+	if (if_dynamic) file_name = "dynamic_potential_gradient.txt";
+
+	std::ofstream data_file (file_name);
+
+	if (if_dynamic) {
+		for (auto potential : this->dynamic_collision_point_potential_gradient_) {
+			data_file << potential(0) << " " << potential(1) << " " << potential(2) << "\n";
+		}
+	} else {
+		for (auto potential : this->collision_point_potential_gradient_) {
+			data_file << potential(0) << " " << potential(1) << " " << potential(2) << "\n";
+		}
+	}
+
+	if (data_file.is_open()) {
+		data_file.close();
+	}
+}
+
+double Chomp::get_potential_for_gradient(double x, double y, double z) {
+	double distance_to_nearest_obstacle = std::numeric_limits<double>::infinity();
+	Eigen::Vector3d point(x,y,z);
+	for (auto obstacle : this->obstacle_map_) {
+		double distance = hdi_plan_utils::get_distance(point, obstacle.second->get_position()) -
+						  this->drone_radius_ - (obstacle.second->get_size()/2.0);
+		if (distance < distance_to_nearest_obstacle) distance_to_nearest_obstacle = distance;
+	}
+
+	if (distance_to_nearest_obstacle >= this->min_clearence_) {
+		return 0.0;
+	} else if (distance_to_nearest_obstacle >= 0.0) {
+		const double diff = distance_to_nearest_obstacle - this->min_clearence_;
+		const double gradient_magnitude = diff / this->min_clearence_;
+		return 0.5 * gradient_magnitude * diff;
+	} else {
+		this->is_collsion_free_ = false;
+		return -distance_to_nearest_obstacle + 0.5 * this->min_clearence_;
+	}
+}
+
+double Chomp::get_dynamic_potential(const Eigen::Vector3d& point, int index) {
 	double distance_to_nearest_dynamic_obstacle = std::numeric_limits<double>::infinity();
 	double point_time = this->full_trajectory_->calculate_time_by_index(index);
 	for (auto human : this->human_map_) {
@@ -205,7 +292,34 @@ double Chomp::get_dynamic_potential(const Eigen::Vector3d& point, const int inde
 		potential = -distance_to_nearest_dynamic_obstacle + 0.5 * this->min_clearence_;
 	}
 
-	return potential * exp(-dynamic_collision_factor_ * point_time);
+	return potential * exp(-this->dynamic_collision_factor_ * point_time);
+}
+
+
+double Chomp::get_dynamic_potential_for_gradient(double x, double y, double z, int index) {
+	double distance_to_nearest_dynamic_obstacle = std::numeric_limits<double>::infinity();
+	double point_time = this->full_trajectory_->calculate_time_by_index(index);
+	for (auto human : this->human_map_) {
+		Eigen::Vector2d predicted_position = human.second->predict_path(point_time);
+		Eigen::Vector2d point_position(x, y);
+		double distance = hdi_plan_utils::get_distance_2d(point_position, predicted_position) -
+						  this->drone_radius_ - (human.second->get_human_block_distance()/2.0);
+		if (distance < distance_to_nearest_dynamic_obstacle) distance_to_nearest_dynamic_obstacle = distance;
+	}
+
+	double potential;
+	if (distance_to_nearest_dynamic_obstacle >= this->min_clearence_) {
+		potential = 0.0;
+	} else if (distance_to_nearest_dynamic_obstacle >= 0.0) {
+		const double diff = distance_to_nearest_dynamic_obstacle - this->min_clearence_;
+		const double gradient_magnitude = diff / this->min_clearence_;
+		potential = 0.5 * gradient_magnitude * diff;
+	} else {
+		this->is_collsion_free_ = false;
+		potential = -distance_to_nearest_dynamic_obstacle + 0.5 * this->min_clearence_;
+	}
+
+	return potential * exp(-this->dynamic_collision_factor_ * point_time);
 }
 
 double Chomp::get_collision_cost() {
