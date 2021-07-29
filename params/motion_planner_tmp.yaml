@@ -1,0 +1,35 @@
+start_position: [3,3,3]
+goal_position: [3,20,3]
+total_planning_time: 80.0
+
+max_distance: 8
+r_rrt: 8
+rrg_r: 8
+epsilon: 8
+
+quadrotor_speed: 8
+quadrotor_radius: 8
+
+
+collision_threshold: 8
+planning_time_limit: 8
+max_iterations: 8
+max_iterations_after_collision_free: 8
+
+learning_rate: 8
+
+obstacle_cost_weight: 8
+
+dynamic_obstacle_cost_weight: 8
+dynamic_collision_factor: 8
+
+smoothness_cost_weight: 8
+smoothness_cost_velocity: 8
+smoothness_cost_acceleration: 8
+smoothness_cost_jerk: 8
+
+ridge_factor: 8
+min_clearence: 8
+joint_update_limit: 8
+
+discretization: 8

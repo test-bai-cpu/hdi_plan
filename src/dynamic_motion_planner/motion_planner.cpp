@@ -5,6 +5,13 @@ namespace hdi_plan {
 MotionPlanner::MotionPlanner(const ros::NodeHandle &nh, const ros::NodeHandle &pnh)
         : nh_(nh),
           pnh_(pnh) {
+	// load parameters
+	if (!this->load_params()) {
+		ROS_WARN("[%s] Could not load all parameters in motion planner.",
+				 this->pnh_.getNamespace().c_str());
+	} else {
+		ROS_INFO("[%s] Loaded all parameters in motion planner.", this->pnh_.getNamespace().c_str());
+	}
 
     // setup
     this->setup();
@@ -38,6 +45,66 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh, const ros::NodeHandle &p
 
 MotionPlanner::~MotionPlanner() = default;
 
+void MotionPlanner::check_params() {
+	std::cout << "total_planning_time: " << this->total_plan_time_ << std::endl;
+	std::cout << "quadrotor_radius: " << this->quadrotor_radius_ << std::endl;
+	std::cout << "quadrotor_speed: " << this->quadrotor_speed_ << std::endl;
+	std::cout << "max_distance: " << this->max_distance_ << std::endl;
+	std::cout << "r_rrt: " << this->r_rrt_ << std::endl;
+	std::cout << "rrg_r: " << this->rrg_r_ << std::endl;
+	std::cout << "epsilon: " << this->epsilon_ << std::endl;
+
+	std::cout << "collision_threshold: " << this->collision_threshold_ << std::endl;
+	std::cout << "planning_time_limit: " << this->planning_time_limit_ << std::endl;
+	std::cout << "max_iterations: " << this->max_iterations_ << std::endl;
+	std::cout << "max_iterations_after_collision_free: " << this->max_iterations_after_collision_free_ << std::endl;
+
+	std::cout << "learning_rate: " << this->learning_rate_ << std::endl;
+	std::cout << "obstacle_cost_weight: " << this->obstacle_cost_weight_ << std::endl;
+	std::cout << "dynamic_obstacle_cost_weight: " << this->dynamic_obstacle_cost_weight_ << std::endl;
+	std::cout << "dynamic_collision_factor: " << this->dynamic_collision_factor_ << std::endl;
+	std::cout << "smoothness_cost_weight: " << this->smoothness_cost_weight_ << std::endl;
+
+	std::cout << "smoothness_cost_velocity: " << this->smoothness_cost_velocity_ << std::endl;
+	std::cout << "smoothness_cost_acceleration: " << this->smoothness_cost_acceleration_ << std::endl;
+	std::cout << "smoothness_cost_jerk: " << this->smoothness_cost_jerk_ << std::endl;
+	std::cout << "ridge_factor: " << this->ridge_factor_ << std::endl;
+	std::cout << "min_clearence: " << this->min_clearence_ << std::endl;
+	std::cout << "joint_update_limit: " << this->joint_update_limit_ << std::endl;
+
+	std::cout << "discretization: " << this->discretization_ << std::endl;
+}
+
+bool MotionPlanner::load_params() {
+	//this->pnh_.getParam("param_name", this->param);
+	this->pnh_.getParam("total_planning_time", this->total_plan_time_);
+	this->pnh_.getParam("quadrotor_radius", this->quadrotor_radius_);
+	this->pnh_.getParam("quadrotor_speed", this->quadrotor_speed_);
+	this->pnh_.getParam("max_distance", this->max_distance_);
+	this->pnh_.getParam("r_rrt", this->r_rrt_);
+	this->pnh_.getParam("rrg_r", this->rrg_r_);
+	this->pnh_.getParam("epsilon", this->epsilon_);
+
+	this->pnh_.getParam("collision_threshold", this->collision_threshold_);
+	this->pnh_.getParam("planning_time_limit", this->planning_time_limit_);
+	this->pnh_.getParam("max_iterations", this->max_iterations_);
+	this->pnh_.getParam("max_iterations_after_collision_free", this->max_iterations_after_collision_free_);
+	this->pnh_.getParam("learning_rate", this->learning_rate_);
+	this->pnh_.getParam("obstacle_cost_weight", this->obstacle_cost_weight_);
+	this->pnh_.getParam("dynamic_obstacle_cost_weight", this->dynamic_obstacle_cost_weight_);
+	this->pnh_.getParam("dynamic_collision_factor", this->dynamic_collision_factor_);
+	this->pnh_.getParam("smoothness_cost_weight", this->smoothness_cost_weight_);
+	this->pnh_.getParam("smoothness_cost_velocity", this->smoothness_cost_velocity_);
+	this->pnh_.getParam("smoothness_cost_acceleration", this->smoothness_cost_acceleration_);
+	this->pnh_.getParam("smoothness_cost_jerk", this->smoothness_cost_jerk_);
+	this->pnh_.getParam("ridge_factor", this->ridge_factor_);
+	this->pnh_.getParam("min_clearence", this->min_clearence_);
+	this->pnh_.getParam("joint_update_limit", this->joint_update_limit_);
+	this->pnh_.getParam("discretization", this->discretization_);
+
+	return true;
+}
+
 void MotionPlanner::initiate_obstacles() {
 	std::cout << "Initiate obstacles, add static obstacles." << std::endl;
 
@@ -66,10 +133,16 @@ double MotionPlanner::distance_function(const std::shared_ptr<RRTNode>& a, const
 
 void MotionPlanner::setup() {
     //Eigen::Vector3d start_position(0,0,5);
-    Eigen::Vector3d start_position(1,1,2);
+    std::vector<double> start_position_param;
+    this->pnh_.getParam("start_position", start_position_param);
+	Eigen::Vector3d start_position(start_position_param[0],start_position_param[1],start_position_param[2]);
+	std::cout << "The start position is set to: " << start_position(0) << start_position(1) << start_position(2) << std::endl;
     this->start_ = std::make_shared<RRTNode>(start_position, 0);
     //Eigen::Vector3d goal_position(20,20,5);
-    Eigen::Vector3d goal_position(20,1,2);
+	std::vector<double> goal_position_param;
+	this->pnh_.getParam("goal_position", goal_position_param);
+	Eigen::Vector3d goal_position(goal_position_param[0],goal_position_param[1],goal_position_param[2]);
+	std::cout << "The goal position is set to: " << goal_position(0) << goal_position(1) << goal_position(2) << std::endl;
     this->goal_ = std::make_shared<RRTNode>(goal_position, this->total_plan_time_);
     this->goal_->set_lmc(0);
     this->goal_->set_g_cost(0);
@@ -352,7 +425,7 @@ void MotionPlanner::remove_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
 
 bool MotionPlanner::check_if_node_inside_obstacle(const std::shared_ptr<Obstacle>& obstacle, const std::shared_ptr<RRTNode>& node) {
 	double distance = hdi_plan_utils::get_distance(obstacle->get_position(), node->get_state());
-	if (distance - this->drone_radius < obstacle->get_size()/2 + 1) {
+	if (distance - this->quadrotor_radius_ < obstacle->get_size()/2 + 1) {
         ROS_INFO("The node is inside obstacle");
 		return true;
 	}
@@ -518,7 +591,7 @@ bool MotionPlanner::update_solution_path() {
 
     double cost_to_nearest_node = hdi_plan_utils::get_distance(nearest_node_of_quadrotor->get_state(), this->quadrotor_->get_state());
 
-    std::cout << "The distance from current position to nearest node: " << cost_to_nearest_node << std::endl;
+    //std::cout << "The distance from current position to nearest node: " << cost_to_nearest_node << std::endl;
     if (cost_to_nearest_node > this->max_distance_) {
         return if_find_solution; // return false, fail to find solution
     }
@@ -548,8 +621,12 @@ void MotionPlanner::optimize_solution_path() {
 	//std::cout << "The solution path contains: " << this->solution_path.size() << " points" << std::endl;
 	//std::cout << "The obstacle number is " << this->obstacle_map.size() << std::endl;
 	//std::cout << "The dynamic obstacle number is " << this->human_map_.size() << std::endl;
-	auto chomp_trajectory = std::make_shared<ChompTrajectory>(this->solution_path, static_cast<double>((chomp_start_time - this->start_time_).toSec()), this->total_plan_time_);
-	auto chomp = std::make_shared<Chomp>(chomp_trajectory, this->obstacle_map, this->human_map_);
+	auto chomp_trajectory = std::make_shared<ChompTrajectory>(this->solution_path, static_cast<double>((chomp_start_time - this->start_time_).toSec()), this->total_plan_time_, this->discretization_, this->quadrotor_speed_);
+	auto chomp = std::make_shared<Chomp>(this->collision_threshold_, this->planning_time_limit_, this->max_iterations_,
+									    this->max_iterations_after_collision_free_, this->learning_rate_, this->obstacle_cost_weight_, this->dynamic_obstacle_cost_weight_,
+									    this->dynamic_collision_factor_, this->smoothness_cost_weight_, this->smoothness_cost_velocity_, this->smoothness_cost_acceleration_,
+									    this->smoothness_cost_jerk_, this->ridge_factor_, this->min_clearence_, this->joint_update_limit_, this->quadrotor_radius_,
+										chomp_trajectory, this->obstacle_map, this->human_map_);
 	std::vector<Eigen::Vector3d> optimized_trajectory = chomp->get_optimized_trajectory();
 
 	double chomp_process_time = (ros::Time::now() - chomp_start_time).toSec();

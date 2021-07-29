@@ -1,9 +1,11 @@
 #include "dynamic_motion_planner/chomp_trajectory.hpp"
 
 namespace hdi_plan {
-ChompTrajectory::ChompTrajectory(const std::vector<Eigen::Vector3d>& trajectory_points, const double start_time, const double end_time) {
+ChompTrajectory::ChompTrajectory(const std::vector<Eigen::Vector3d>& trajectory_points, const double start_time, const double end_time, const double discretization, const double speed) {
 	this->start_time_ = start_time;
 	this->end_time_ = end_time;
+	this->discretization_ = discretization;
+	this->speed_ = speed;
 	this->trajectory_points_ = trajectory_points;
 	this->calculate_duration_and_points_num_for_full_trajectory();
 	this->update_trajectory_for_diff();

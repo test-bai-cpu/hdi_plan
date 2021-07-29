@@ -11,7 +11,7 @@
 namespace hdi_plan {
 class ChompTrajectory {
 public:
-	ChompTrajectory(const std::vector<Eigen::Vector3d>& trajectory_points, const double start_time, const double end_time);
+	ChompTrajectory(const std::vector<Eigen::Vector3d>& trajectory_points, const double start_time, const double end_time, const double discretization, const double speed);
 	ChompTrajectory(const Eigen::Vector3d& start_point, const Eigen::Vector3d& end_point);
 	~ChompTrajectory();
 
@@ -89,7 +89,7 @@ private:
 	int num_points_diff_;
 	int num_points_free_;
 	int num_joints_{3};
-	double discretization_{0.5}; // every interval is 0.1s
+	double discretization_{0.5}; // every interval is 0.5s
 	double speed_{1.0};
 	std::vector<int> group_number_;
 	std::vector<int> group_number_add_;

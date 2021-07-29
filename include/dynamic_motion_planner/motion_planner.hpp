@@ -59,6 +59,7 @@ public:
     // debug
     ompl::base::RealVectorBounds get_space_info();
     double get_nn_size();
+    void check_params();
 
 private:
     // debug
@@ -67,7 +68,7 @@ private:
     bool if_find_solution_{false};
 
     // drone
-    double drone_radius{0.5};
+    double quadrotor_radius_{0.5};
 
     // ros nodes
     ros::NodeHandle nh_;
@@ -91,6 +92,7 @@ private:
     std::shared_ptr<ompl::NearestNeighborsGNAT<std::shared_ptr<RRTNode>>> nearest_neighbors_tree_;
 
     // setup
+    bool load_params();
     void setup();
     double distance_function(const std::shared_ptr<RRTNode>& a, const std::shared_ptr<RRTNode>& b) ;
     void set_to_start_position();
@@ -210,6 +212,26 @@ private:
 
     // path write to file name
     int path_file_num_{0};
+
+    // chomp trajectory
+	double discretization_;
+
+	// chomp
+	double collision_threshold_;
+	double planning_time_limit_;
+	int max_iterations_;
+	int max_iterations_after_collision_free_;
+	double learning_rate_;
+	double obstacle_cost_weight_;
+	double dynamic_obstacle_cost_weight_;
+	double dynamic_collision_factor_;
+	double smoothness_cost_weight_;
+	double smoothness_cost_velocity_;
+	double smoothness_cost_acceleration_;
+	double smoothness_cost_jerk_;
+	double ridge_factor_;
+	double min_clearence_;
+	double joint_update_limit_;
 };
 
 

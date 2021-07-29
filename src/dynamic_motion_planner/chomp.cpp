@@ -2,7 +2,27 @@
 
 namespace hdi_plan {
 
-Chomp::Chomp(const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<std::string, std::shared_ptr<Obstacle>>& obstacle_map, const std::map<int, std::shared_ptr<Human>>& human_map) {
+Chomp::Chomp(const double collision_threshold, const double planning_time_limit, const int max_iterations, const int max_iterations_after_collision_free,
+	         const double learning_rate, const double obstacle_cost_weight, const double dynamic_obstacle_cost_weight, const double dynamic_collision_factor,
+	         const double smoothness_cost_weight, const double smoothness_cost_velocity, const double smoothness_cost_acceleration, const double smoothness_cost_jerk,
+	         const double ridge_factor, const double min_clearence, const double joint_update_limit, const double quadrotor_radius,
+			 const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<std::string, std::shared_ptr<Obstacle>>& obstacle_map, const std::map<int, std::shared_ptr<Human>>& human_map
+):  collision_threshold_(collision_threshold),
+	planning_time_limit_(planning_time_limit),
+	max_iterations_(max_iterations),
+	max_iterations_after_collision_free_(max_iterations_after_collision_free),
+	learning_rate_(learning_rate),
+	obstacle_cost_weight_(obstacle_cost_weight),
+	dynamic_obstacle_cost_weight_(dynamic_obstacle_cost_weight),
+	dynamic_collision_factor_(dynamic_collision_factor),
+	smoothness_cost_weight_(smoothness_cost_weight),
+	smoothness_cost_velocity_(smoothness_cost_velocity),
+	smoothness_cost_acceleration_(smoothness_cost_acceleration),
+	smoothness_cost_jerk_(smoothness_cost_jerk),
+	ridge_factor_(ridge_factor),
+	min_clearence_(min_clearence),
+	joint_update_limit_(joint_update_limit),
+	quadrotor_radius_(quadrotor_radius){
 	//ROS_INFO("Start in the chomp");
 	this->full_trajectory_ = trajectory;
 	this->obstacle_map_ = obstacle_map;
@@ -19,7 +39,46 @@ Chomp::Chomp(const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<
 
 Chomp::~Chomp() = default;
 
+void Chomp::check_params() {
+	std::cout << "#collision_threshold: " << this->collision_threshold_ << std::endl;
+	std::cout << "#planning_time_limit: " << this->planning_time_limit_ << std::endl;
+	std::cout << "#max_iterations: " << this->max_iterations_ << std::endl;
+	std::cout << "#max_iterations_after_collision_free: " << this->max_iterations_after_collision_free_ << std::endl;
+
+	std::cout << "#learning_rate: " << this->learning_rate_ << std::endl;
+	std::cout << "#obstacle_cost_weight: " << this->obstacle_cost_weight_ << std::endl;
+	std::cout << "#dynamic_obstacle_cost_weight: " << this->dynamic_obstacle_cost_weight_ << std::endl;
+	std::cout << "#dynamic_collision_factor: " << this->dynamic_collision_factor_ << std::endl;
+	std::cout << "#smoothness_cost_weight: " << this->smoothness_cost_weight_ << std::endl;
+
+	std::cout << "#smoothness_cost_velocity: " << this->smoothness_cost_velocity_ << std::endl;
+	std::cout << "#smoothness_cost_acceleration: " << this->smoothness_cost_acceleration_ << std::endl;
+	std::cout << "#smoothness_cost_jerk: " << this->smoothness_cost_jerk_ << std::endl;
+	std::cout << "#ridge_factor: " << this->ridge_factor_ << std::endl;
+	std::cout << "#min_clearence: " << this->min_clearence_ << std::endl;
+	std::cout << "#joint_update_limit: " << this->joint_update_limit_ << std::endl;
+
+}
+
 void Chomp::initialize() {
+	std::cout << "Check chomp params. The planning time is. " << this->planning_time_limit_ << std::endl;
+	std::cout << "#collision_threshold: " << this->collision_threshold_ << std::endl;
+	std::cout << "#planning_time_limit: " << this->planning_time_limit_ << std::endl;
+	std::cout << "#max_iterations: " << this->max_iterations_ << std::endl;
+	std::cout << "#max_iterations_after_collision_free: " << this->max_iterations_after_collision_free_ << std::endl;
+
+	std::cout << "#learning_rate: " << this->learning_rate_ << std::endl;
+	std::cout << "#obstacle_cost_weight: " << this->obstacle_cost_weight_ << std::endl;
+	std::cout << "#dynamic_obstacle_cost_weight: " << this->dynamic_obstacle_cost_weight_ << std::endl;
+	std::cout << "#dynamic_collision_factor: " << this->dynamic_collision_factor_ << std::endl;
+	std::cout << "#smoothness_cost_weight: " << this->smoothness_cost_weight_ << std::endl;
+
+	std::cout << "#smoothness_cost_velocity: " << this->smoothness_cost_velocity_ << std::endl;
+	std::cout << "#smoothness_cost_acceleration: " << this->smoothness_cost_acceleration_ << std::endl;
+	std::cout << "#smoothness_cost_jerk: " << this->smoothness_cost_jerk_ << std::endl;
+	std::cout << "#ridge_factor: " << this->ridge_factor_ << std::endl;
+	std::cout << "#min_clearence: " << this->min_clearence_ << std::endl;
+	std::cout << "#joint_update_limit: " << this->joint_update_limit_ << std::endl;
 	//ROS_INFO("Chomp: Initialize");
 	this->num_vars_all_ = this->full_trajectory_->get_num_points_diff(); // actual points + 10
 	this->num_vars_free_ = this->full_trajectory_->get_num_points_free(); // actual points - 2
@@ -190,7 +249,7 @@ double Chomp::get_potential(const Eigen::Vector3d& point) {
 	double distance_to_nearest_obstacle = std::numeric_limits<double>::infinity();
 	for (auto obstacle : this->obstacle_map_) {
 		double distance = hdi_plan_utils::get_distance(point, obstacle.second->get_position()) -
-				this->drone_radius_ - (obstacle.second->get_size()/2.0);
+				this->quadrotor_radius_ - (obstacle.second->get_size()/2.0);
 		if (distance < distance_to_nearest_obstacle) distance_to_nearest_obstacle = distance;
 	}
 
@@ -253,7 +312,7 @@ double Chomp::get_potential_for_gradient(double x, double y, double z) {
 	Eigen::Vector3d point(x,y,z);
 	for (auto obstacle : this->obstacle_map_) {
 		double distance = hdi_plan_utils::get_distance(point, obstacle.second->get_position()) -
-						  this->drone_radius_ - (obstacle.second->get_size()/2.0);
+						  this->quadrotor_radius_ - (obstacle.second->get_size()/2.0);
 		if (distance < distance_to_nearest_obstacle) distance_to_nearest_obstacle = distance;
 	}
 
@@ -276,7 +335,7 @@ double Chomp::get_dynamic_potential(const Eigen::Vector3d& point, int index) {
 		Eigen::Vector2d predicted_position = human.second->predict_path(point_time);
 		Eigen::Vector2d point_position(point(0), point(1));
 		double distance = hdi_plan_utils::get_distance_2d(point_position, predicted_position) -
-						  this->drone_radius_ - (human.second->get_human_block_distance()/2.0);
+						  this->quadrotor_radius_ - (human.second->get_human_block_distance()/2.0);
 		if (distance < distance_to_nearest_dynamic_obstacle) distance_to_nearest_dynamic_obstacle = distance;
 	}
 
@@ -303,7 +362,7 @@ double Chomp::get_dynamic_potential_for_gradient(double x, double y, double z, i
 		Eigen::Vector2d predicted_position = human.second->predict_path(point_time);
 		Eigen::Vector2d point_position(x, y);
 		double distance = hdi_plan_utils::get_distance_2d(point_position, predicted_position) -
-						  this->drone_radius_ - (human.second->get_human_block_distance()/2.0);
+						  this->quadrotor_radius_ - (human.second->get_human_block_distance()/2.0);
 		if (distance < distance_to_nearest_dynamic_obstacle) distance_to_nearest_dynamic_obstacle = distance;
 	}
 

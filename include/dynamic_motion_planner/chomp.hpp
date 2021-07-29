@@ -23,7 +23,11 @@
 namespace hdi_plan {
 class Chomp {
 public:
-	Chomp(const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<std::string, std::shared_ptr<Obstacle>>& obstacle_map, const std::map<int, std::shared_ptr<Human>>& human_map);
+	Chomp(const double collision_threshold, const double planning_time_limit, const int max_iterations, const int max_iterations_after_collision_free,
+		  const double learning_rate, const double obstacle_cost_weight, const double dynamic_obstacle_cost_weight, const double dynamic_collision_factor,
+		  const double smoothness_cost_weight, const double smoothness_cost_velocity, const double smoothness_cost_acceleration, const double smoothness_cost_jerk,
+		  const double ridge_factor, const double min_clearence, const double joint_update_limit, const double quadrotor_radius,
+		  const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<std::string, std::shared_ptr<Obstacle>>& obstacle_map, const std::map<int, std::shared_ptr<Human>>& human_map);
 	~Chomp();
 
 	std::vector<Eigen::Vector3d> get_optimized_trajectory() const {
@@ -31,6 +35,10 @@ public:
 	}
 
 private:
+	// debug
+
+	void check_params();
+
 	std::shared_ptr<ChompTrajectory> full_trajectory_;
 	std::vector<Eigen::Vector3d> optimized_trajectory_;
 	int num_vars_all_;
@@ -115,18 +123,18 @@ private:
 	double planning_time_limit_{60.0};
 	int max_iterations_{50};
 	int max_iterations_after_collision_free_{15};
-	double smoothness_cost_weight_{0.5};
+	double learning_rate_{0.1};
 	double obstacle_cost_weight_{0.1};
 	double dynamic_obstacle_cost_weight_{0.1};
 	double dynamic_collision_factor_{0.1};
-	double learning_rate_{0.1};
+	double smoothness_cost_weight_{0.5};
 	double smoothness_cost_velocity_{0.0};
 	double smoothness_cost_acceleration_{1.0};
 	double smoothness_cost_jerk_{0.0};
 	double ridge_factor_{0.0};
-	double drone_radius_{0.5};
 	double min_clearence_{0.5};
 	double joint_update_limit_{0.1};
+	double quadrotor_radius_{0.5};
 	bool use_stochastic_descent_{false};
 
 

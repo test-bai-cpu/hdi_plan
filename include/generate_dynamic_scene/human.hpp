@@ -57,13 +57,14 @@ public:
 
 	double human_height_{2};
 	double human_velocity_{1};
-	double start_time_;
+	
 
 private:
 	Eigen::Vector2d start_position_;
 	Eigen::Vector2d second_position_;
 	bool if_move_{false};
 	int human_id_{0};
+	double start_time_;
 	bool if_add_{false};
 	double human_block_distance_{3};
 };

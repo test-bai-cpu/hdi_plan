@@ -90,6 +90,7 @@
         </node>
 
         <node name="dynamic_motion_planner" pkg="hdi_plan" type="dynamic_motion_planner" output="screen" >
+            <rosparam file="$(find hdi_plan)/params/motion_planner.yaml" />
             <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
         </node>
 
