@@ -66,6 +66,7 @@ private:
     int debug{0};
     int iteration_count{0};
     bool if_find_solution_{false};
+    std::ofstream solve_time_path_file;
 
     // drone
     double quadrotor_radius_{0.5};

@@ -90,16 +90,18 @@
         </node>
 
         <node name="dynamic_motion_planner" pkg="hdi_plan" type="dynamic_motion_planner" output="screen" >
+            <rosparam file="$(find hdi_plan)/params/motion_planner.yaml" />
             <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
-        </node>
-
-        <node name="generate_dynamic_scene_node" pkg="hdi_plan" type="generate_dynamic_scene_node" output="screen" >
         </node>
 
         <node name="publish_trajectory_node" pkg="hdi_plan" type="publish_trajectory_node" output="screen">
+            <rosparam file="$(find hdi_plan)/params/motion_planner.yaml" />
             <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
         </node>
 
+        <node name="path_visualization_node" pkg="hdi_plan" type="path_visualization_node" output="screen" >
+            <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
+        </node>
 
     </group>
 

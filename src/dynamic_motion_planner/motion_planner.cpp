@@ -41,6 +41,9 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh, const ros::NodeHandle &p
 
 	// not use autopilot to pub
 	this->pub_solution_path_ = nh_.advertise<geometry_msgs::PoseStamped>("command/pose", 1);
+
+	std::string file_name = "solve_time.txt";
+	this->solve_time_path_file.open(file_name);
 }
 
 MotionPlanner::~MotionPlanner() = default;
@@ -230,6 +233,9 @@ void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr 
         this->solve();
     } else {
         ROS_INFO("Already reach the goal. Will exit.");
+		if (solve_time_path_file.is_open()) {
+			solve_time_path_file.close();
+		}
         this->sub_quadrotor_state_.shutdown();
     }
 }
@@ -298,6 +304,7 @@ void MotionPlanner::human_movement_callback(const hdi_plan::obstacle_info::Const
 }
 
 bool MotionPlanner::solve() {
+	ros::Time solve_start_time = ros::Time::now();
 	ros::Duration(0.1).sleep();
     this->iteration_count += 1;
     //std::cout << "The iteration number is: " << this->iteration_count << "The nodes number is: " << static_cast<double>(this->nearest_neighbors_tree_->size()) << std::endl;
@@ -338,6 +345,9 @@ bool MotionPlanner::solve() {
 		}
     }
 
+	double solve_time = (ros::Time::now() - solve_start_time).toSec();
+	//std::cout << "The solve iteration time is: " << chomp_process_time << std::endl;
+	this->solve_time_path_file << solve_time << "\n";
     return true;
 }
 
