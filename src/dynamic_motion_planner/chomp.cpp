@@ -128,7 +128,7 @@ bool Chomp::optimize() {
 		double d_cost = this->get_dynamic_collision_cost();
 		double s_cost = this->get_smoothness_cost();
 		double cost = c_cost + d_cost + s_cost;
-		this->solve_time_path_file << c_cost << " " << d_cost << " " << s_cost << " " << cost << "\n";
+		this->chomp_cost_file << c_cost << " " << d_cost << " " << s_cost << " " << cost << "\n";
 		if (this->iteration_ == 0 || cost < this->best_trajectory_cost_) {
 			this->best_trajectory_ = this->full_trajectory_->get_trajectory();
 			this->best_trajectory_cost_ = cost;
