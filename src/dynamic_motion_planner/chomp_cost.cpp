@@ -16,9 +16,9 @@ ChompCost::ChompCost(const std::shared_ptr<ChompTrajectory>& trajectory, const s
 		multiplier *= trajectory->get_discretization();
 		diff_matrix = getDiffMatrix(num_vars_all, &hdi_plan_utils::DIFF_RULES[i][0]);
 		// the slow one is diff_matrix.transpose() * diff_matrix
-		ros::WallTime start_time = ros::WallTime::now();
+		//ros::WallTime start_time = ros::WallTime::now();
 		Eigen::MatrixXd matrix_product = diff_matrix.transpose() * diff_matrix;
-		double process_time = (ros::WallTime::now() - start_time).toSec();
+		//double process_time = (ros::WallTime::now() - start_time).toSec();
 		//std::cout << "The diff_matrix.tranpose * diff_matrix time is: " << process_time << std::endl;
 		this->quad_cost_full_ += (derivative_costs[i] * multiplier) * matrix_product;
 	}

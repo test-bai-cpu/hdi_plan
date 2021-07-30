@@ -61,24 +61,6 @@ void Chomp::check_params() {
 }
 
 void Chomp::initialize() {
-	std::cout << "Check chomp params. The planning time is. " << this->planning_time_limit_ << std::endl;
-	std::cout << "#collision_threshold: " << this->collision_threshold_ << std::endl;
-	std::cout << "#planning_time_limit: " << this->planning_time_limit_ << std::endl;
-	std::cout << "#max_iterations: " << this->max_iterations_ << std::endl;
-	std::cout << "#max_iterations_after_collision_free: " << this->max_iterations_after_collision_free_ << std::endl;
-
-	std::cout << "#learning_rate: " << this->learning_rate_ << std::endl;
-	std::cout << "#obstacle_cost_weight: " << this->obstacle_cost_weight_ << std::endl;
-	std::cout << "#dynamic_obstacle_cost_weight: " << this->dynamic_obstacle_cost_weight_ << std::endl;
-	std::cout << "#dynamic_collision_factor: " << this->dynamic_collision_factor_ << std::endl;
-	std::cout << "#smoothness_cost_weight: " << this->smoothness_cost_weight_ << std::endl;
-
-	std::cout << "#smoothness_cost_velocity: " << this->smoothness_cost_velocity_ << std::endl;
-	std::cout << "#smoothness_cost_acceleration: " << this->smoothness_cost_acceleration_ << std::endl;
-	std::cout << "#smoothness_cost_jerk: " << this->smoothness_cost_jerk_ << std::endl;
-	std::cout << "#ridge_factor: " << this->ridge_factor_ << std::endl;
-	std::cout << "#min_clearence: " << this->min_clearence_ << std::endl;
-	std::cout << "#joint_update_limit: " << this->joint_update_limit_ << std::endl;
 	//ROS_INFO("Chomp: Initialize");
 	this->num_vars_all_ = this->full_trajectory_->get_num_points_diff(); // actual points + 10
 	this->num_vars_free_ = this->full_trajectory_->get_num_points_free(); // actual points - 2
@@ -335,7 +317,7 @@ double Chomp::get_dynamic_potential(const Eigen::Vector3d& point, int index) {
 		Eigen::Vector2d predicted_position = human.second->predict_path(point_time);
 		Eigen::Vector2d point_position(point(0), point(1));
 		double distance = hdi_plan_utils::get_distance_2d(point_position, predicted_position) -
-						  this->quadrotor_radius_ - (human.second->get_human_block_distance()/2.0);
+						  this->quadrotor_radius_ - (human.second->get_human_block_distance());
 		if (distance < distance_to_nearest_dynamic_obstacle) distance_to_nearest_dynamic_obstacle = distance;
 	}
 
@@ -564,6 +546,7 @@ void Chomp::add_increments_to_trajectory() {
 			scale = max_scale;
 		if (min_scale < scale)
 			scale = min_scale;
+		//std::cout << "In chomp scale is : " << scale << std::endl;
 		this->full_trajectory_->add_increments_to_trajectory(this->final_increments_.col(i), i, scale);
 	}
 }

@@ -2,7 +2,8 @@
 
 namespace hdi_plan {
 ChompTrajectory::ChompTrajectory(const std::vector<Eigen::Vector3d>& trajectory_points, const double start_time, const double end_time, const double discretization, const double speed) {
-	this->start_time_ = start_time;
+	this->start_time_ = start_time - 20.0;
+	std::cout << "Chomp trajectory start optimization time is: " << start_time << std::endl;
 	this->end_time_ = end_time;
 	this->discretization_ = discretization;
 	this->speed_ = speed;

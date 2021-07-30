@@ -9,10 +9,10 @@ GenerateObstacle::GenerateObstacle(const ros::NodeHandle &nh, const ros::NodeHan
 	this->update_human_obstacle_pub_ = nh_.advertise<hdi_plan::obstacle_info>("hdi_plan/obstacle_info_topic", 1);
 
 	// wait until human movement start
-	ros::Duration(25.0).sleep();
+	ros::Duration(20.0 + 5.0 + 25.0).sleep();
 	this->publish_human_movement_1();
-	ros::Duration(5.0).sleep();
-	this->publish_human_movement_2();
+	//ros::Duration(2.0).sleep();
+	//this->publish_human_movement_2();
 	//ros::Duration(21.0).sleep();
 	//this->publish_obstacle();
 }
@@ -45,8 +45,8 @@ void GenerateObstacle::publish_obstacle() {
 }
 
 void GenerateObstacle::publish_human_movement_1() {
-	Eigen::Vector2d start_point(8.0, 0.0);
-	Eigen::Vector2d goal_point(8.0, 8.0);
+	Eigen::Vector2d start_point(10.0, 1.0);
+	Eigen::Vector2d goal_point(10.0, 20.0);
 	Eigen::Vector2d current_point(start_point(0), start_point(1));
 	double distance = hdi_plan_utils::get_distance_2d(start_point, goal_point);
 	double velocity = 1;
@@ -66,12 +66,12 @@ void GenerateObstacle::publish_human_movement_1() {
 		ros::Duration(period).sleep();
 		count += 1;
 	}
-	ROS_INFO("###Finish Generate Obstacle: Start to spawn a moving obstacle 1.");
+	//ROS_INFO("###Finish Generate Obstacle: Start to spawn a moving obstacle 1.");
 }
 
 void GenerateObstacle::publish_human_movement_2() {
-	Eigen::Vector2d start_point(5.0, 0.0);
-	Eigen::Vector2d goal_point(5.0, 8.0);
+	Eigen::Vector2d start_point(15.0, 1.0);
+	Eigen::Vector2d goal_point(15.0, 30.0);
 	Eigen::Vector2d current_point(start_point(0), start_point(1));
 	double distance = hdi_plan_utils::get_distance_2d(start_point, goal_point);
 	double velocity = 1;

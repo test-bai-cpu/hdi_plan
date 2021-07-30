@@ -55,7 +55,7 @@ public:
 		return this->human_block_distance_;
 	}
 
-	double human_height_{2};
+	double human_height_{3};
 	double human_velocity_{1};
 	
 

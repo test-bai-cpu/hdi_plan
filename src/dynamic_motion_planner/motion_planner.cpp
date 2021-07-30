@@ -332,7 +332,7 @@ bool MotionPlanner::solve() {
     this->rewire_neighbors(random_node);
     this->reduce_inconsistency();
 
-    if (this->iteration_count > 200 && (this->iteration_count % 50 == 1 || this->if_environment_change)) {
+    if (this->iteration_count > 200 && (this->iteration_count % 100 == 1 || this->if_environment_change)) {
 		if (this->update_solution_path()) {
 			this->optimize_solution_path();
 		}
@@ -435,7 +435,11 @@ bool MotionPlanner::check_if_node_inside_obstacle(const std::shared_ptr<Obstacle
 bool MotionPlanner::check_if_node_inside_all_obstacles(const std::shared_ptr<RRTNode>& node, bool consider_human) {
 	if (consider_human && this->exist_human_) {
 		for (auto human : this->human_map_) {
-			if (human.second->check_if_node_inside_human(node)) return true;
+			if (human.second->check_if_node_inside_human(node)) {
+				//ROS_INFO("#####The node is inside human, will ignore it.");
+				return true;
+			}
+			
 		}
 	}
 
