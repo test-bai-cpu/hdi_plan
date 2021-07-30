@@ -35,6 +35,9 @@ Chomp::Chomp(const double collision_threshold, const double planning_time_limit,
 	this->export_potential_data(false);
 	this->export_potential_gradient_data(true);
 	this->export_potential_gradient_data(false);
+	if (chomp_cost_file.is_open()) {
+		chomp_cost_file.close();
+	}
 }
 
 Chomp::~Chomp() = default;
@@ -116,6 +119,8 @@ void Chomp::initialize() {
 
 bool Chomp::optimize() {
 	ros::WallTime start_time = ros::WallTime::now();
+	std::string file_name = "chomp_cost.txt";
+	this->chomp_cost_file.open(file_name);
 	for (this->iteration_=0; this->iteration_ < this->max_iterations_; this->iteration_++) {
 		//std::cout << "The iteration number is: " << this->iteration_ << std::endl;
 		perform_forward_kinematics();
@@ -123,7 +128,7 @@ bool Chomp::optimize() {
 		double d_cost = this->get_dynamic_collision_cost();
 		double s_cost = this->get_smoothness_cost();
 		double cost = c_cost + d_cost + s_cost;
-
+		this->solve_time_path_file << c_cost << " " << d_cost << " " << s_cost << " " << cost << "\n";
 		if (this->iteration_ == 0 || cost < this->best_trajectory_cost_) {
 			this->best_trajectory_ = this->full_trajectory_->get_trajectory();
 			this->best_trajectory_cost_ = cost;

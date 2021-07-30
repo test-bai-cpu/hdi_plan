@@ -36,7 +36,7 @@ public:
 
 private:
 	// debug
-
+	std::ofstream chomp_cost_file;
 	void check_params();
 
 	std::shared_ptr<ChompTrajectory> full_trajectory_;
