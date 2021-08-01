@@ -70,9 +70,9 @@ void PublishTrajectory::trajectory_callback(const hdi_plan::point_array::ConstPt
 	this->if_get_new_path_ = false;
 
 	geometry_msgs::PoseStamped go_to_pose_msg;
-	//bool find_current_position = false;
+	bool find_current_position = false;
 	for (int i = 0; i < trajectory_size; i++) {
-		if ((i%5 != 1) && (i != trajectory_size-1)) continue;
+		if ((i > 4) && (i%5 != 1) && (i != trajectory_size-1)) continue;
 		
 		if (this->if_get_new_path_) {
 			ROS_INFO("Now break the previous callback");
@@ -81,15 +81,15 @@ void PublishTrajectory::trajectory_callback(const hdi_plan::point_array::ConstPt
 
 		if (hdi_plan_utils::get_distance(quadrotor_state_, this->goal_state_) < 0.5) {
 			ROS_INFO("Already reach the goal area, in publish trajectory node. Stop publishing the trajectory.");
-			break;
+			i = trajectory_size-1;
 		}
-		/*
-		if (!find_current_position) {
+		
+		if ((!find_current_position) && (i<20)) {
 			Eigen::Vector3d traj_point(msg->points[i].x, msg->points[i].y, msg->points[i].z);
 			double distance = hdi_plan_utils::get_distance(traj_point, this->quadrotor_state_);
 			if (distance < 0.5) find_current_position = true;
 			continue;
-		}*/
+		}
 
 		go_to_pose_msg.pose.position.x = msg->points[i].x;
 		go_to_pose_msg.pose.position.y = msg->points[i].y;

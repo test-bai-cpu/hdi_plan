@@ -218,9 +218,19 @@ std::shared_ptr<RRTNode> MotionPlanner::generate_random_node() {
 }
 
 double MotionPlanner::generate_random_time(const Eigen::Vector3d& state) {
+	bool choose_time_by_distance = (rand() % 100) < 90;
+
 	double min_time = this->total_plan_time_ - hdi_plan_utils::get_distance(state, this->goal_->get_state())/this->quadrotor_speed_;
 	double max_time = this->total_plan_time_;
-	double random_time = min_time + (rand()/double(RAND_MAX)*(max_time - min_time));
+
+	double random_time;
+	
+	if (choose_time_by_distance) {
+		random_time = min_time;
+	} else {
+		random_time = min_time + (rand()/double(RAND_MAX)*(max_time - min_time));
+	}
+
 	return random_time;
 }
 
@@ -232,6 +242,7 @@ void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr 
     if (hdi_plan_utils::get_distance(quadrotor_state, this->goal_->get_state()) > 1) {
         this->solve();
     } else {
+		std::cout << "The iteration number is: " << this->iteration_count << "The nodes number is: " << static_cast<double>(this->nearest_neighbors_tree_->size()) << std::endl;
         ROS_INFO("Already reach the goal. Will exit.");
 		if (solve_time_path_file.is_open()) {
 			solve_time_path_file.close();
@@ -260,7 +271,8 @@ void MotionPlanner::obstacle_info_callback(const hdi_plan::obstacle_info::ConstP
 		ros::Time human_start_time = ros::Time::now();
 		std::cout << "The human_" << human_id  << " start time is: " << static_cast<double>((human_start_time - this->start_time_).toSec()) << std::endl;
 		Eigen::Vector2d human_start_position(msg->position.x, msg->position.y);
-		this->human_map_[human_id] = std::make_shared<Human>(human_start_position, human_id, static_cast<double>((human_start_time - this->start_time_).toSec()));
+		this->human_map_tmp_[human_id] = std::make_shared<Human>(human_start_position, human_id, static_cast<double>((human_start_time - this->start_time_).toSec()));
+		std::cout << "Human map tmp size is " << this->human_map_tmp_.size() << std::endl;
 		std::cout << "Human map size is " << this->human_map_.size() << std::endl;
 		return;
 	}
@@ -295,17 +307,20 @@ void MotionPlanner::human_movement_callback_region_version(const geometry_msgs::
 
 void MotionPlanner::human_movement_callback(const hdi_plan::obstacle_info::ConstPtr &msg) {
 	int human_id = this->get_human_id(msg->name);
-	if (!this->human_map_[human_id]->get_if_move()) {
+	if (!this->human_map_tmp_[human_id]->get_if_move()) {
 		std::cout << "To get second pos of human_" << human_id << " ." << std::endl;
 		Eigen::Vector2d human_position(msg->position.x, msg->position.y);
-		this->human_map_[human_id]->set_second_position(human_position);
-		this->human_map_[human_id]->set_if_move(true);
+		this->human_map_tmp_[human_id]->set_second_position(human_position);
+		this->human_map_tmp_[human_id]->set_if_move(true);
+		this->human_map_[human_id] = this->human_map_tmp_[human_id];
+		std::cout << "In movement: Human map tmp size is " << this->human_map_tmp_.size() << std::endl;
+		std::cout << "In movement: Human map size is " << this->human_map_.size() << std::endl;
 	}
 }
 
 bool MotionPlanner::solve() {
-	ros::Time solve_start_time = ros::Time::now();
 	ros::Duration(0.1).sleep();
+	ros::Time solve_start_time = ros::Time::now();
     this->iteration_count += 1;
     //std::cout << "The iteration number is: " << this->iteration_count << "The nodes number is: " << static_cast<double>(this->nearest_neighbors_tree_->size()) << std::endl;
     /*
@@ -346,8 +361,8 @@ bool MotionPlanner::solve() {
     }
 
 	double solve_time = (ros::Time::now() - solve_start_time).toSec();
-	//std::cout << "The solve iteration time is: " << chomp_process_time << std::endl;
 	this->solve_time_path_file << solve_time << "\n";
+	
     return true;
 }
 
@@ -383,7 +398,7 @@ void MotionPlanner::update_obstacle() {
 	}
 
 	for (auto human : this->human_map_) {
-		if (!human.second->get_if_add()) {
+		if ((!human.second->get_if_add()) && human.second->get_if_move()) {
 			std::cout << "Adding human_" << human.first << " as an obstacle." << std::endl;
 			this->add_human_as_obstacle(human.first);
 			add_obstacle = true;
@@ -630,6 +645,7 @@ bool MotionPlanner::update_solution_path() {
 }
 
 void MotionPlanner::optimize_solution_path() {
+	std::cout << "Now the solution path is found, the optimize part begins. The iteration number is: " << this->iteration_count << "The nodes number is: " << static_cast<double>(this->nearest_neighbors_tree_->size()) << std::endl;
 	ros::Time chomp_start_time = ros::Time::now();
 	ROS_INFO("Found the solution path, start to optimize");
 	//std::cout << "The solution path contains: " << this->solution_path.size() << " points" << std::endl;

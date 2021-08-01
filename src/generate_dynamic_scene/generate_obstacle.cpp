@@ -9,7 +9,7 @@ GenerateObstacle::GenerateObstacle(const ros::NodeHandle &nh, const ros::NodeHan
 	this->update_human_obstacle_pub_ = nh_.advertise<hdi_plan::obstacle_info>("hdi_plan/obstacle_info_topic", 1);
 
 	// wait until human movement start
-	ros::Duration(20.0 + 5.0 + 25.0).sleep();
+	ros::Duration(20.0 + 5.0).sleep();
 	this->publish_human_movement_1();
 	//ros::Duration(2.0).sleep();
 	//this->publish_human_movement_2();
@@ -37,15 +37,15 @@ void GenerateObstacle::publish_obstacle() {
 	obstacle_msg.name = "cube";
 	obstacle_msg.type = hdi_plan::Obstacle_type::cube;
 	obstacle_msg.operation = true;
-	obstacle_msg.size = 2;
+	obstacle_msg.size = 6;
 	obstacle_msg.position.x = 10.0;
-	obstacle_msg.position.y = 3.0;
-	obstacle_msg.position.z = 1.0;
+	obstacle_msg.position.y = 10.0;
+	obstacle_msg.position.z = 2.0;
 	update_human_obstacle_pub_.publish(obstacle_msg);
 }
 
 void GenerateObstacle::publish_human_movement_1() {
-	Eigen::Vector2d start_point(10.0, 1.0);
+	Eigen::Vector2d start_point(10.0, -3.0);
 	Eigen::Vector2d goal_point(10.0, 20.0);
 	Eigen::Vector2d current_point(start_point(0), start_point(1));
 	double distance = hdi_plan_utils::get_distance_2d(start_point, goal_point);

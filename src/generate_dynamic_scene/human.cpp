@@ -2,7 +2,7 @@
 
 namespace hdi_plan {
 Human::Human(Eigen::Vector2d start_position, int human_id, double start_time)
-		: start_position_(start_position), human_id_(human_id), start_time_(start_time - 25.0) {
+		: start_position_(start_position), human_id_(human_id), start_time_(0.0) {
 
 	std::cout << "Human start time is: " << start_time_ << std::endl;
 

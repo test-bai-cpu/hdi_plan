@@ -192,7 +192,8 @@ private:
 	void make_parent_of(std::shared_ptr<RRTNode> parent_node, std::shared_ptr<RRTNode> node);
 
 	// human part
-	std::map<int, std::shared_ptr<Human>> human_map_;
+	std::map<int, std::shared_ptr<Human>> human_map_tmp_;
+    std::map<int, std::shared_ptr<Human>> human_map_;
 	std::vector<int> human_id_list_;
 	int get_human_id(const std::string human_name);
 	bool exist_human_{false};

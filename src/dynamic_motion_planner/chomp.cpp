@@ -125,7 +125,10 @@ bool Chomp::optimize() {
 		//std::cout << "The iteration number is: " << this->iteration_ << std::endl;
 		perform_forward_kinematics();
 		double c_cost = this->get_collision_cost();
-		double d_cost = this->get_dynamic_collision_cost();
+		double d_cost = 0;
+		if (this->human_map_.size() > 0) {
+			d_cost = this->get_dynamic_collision_cost();
+		}
 		double s_cost = this->get_smoothness_cost();
 		double cost = c_cost + d_cost + s_cost;
 		this->chomp_cost_file << c_cost << " " << d_cost << " " << s_cost << " " << cost << "\n";
@@ -137,7 +140,9 @@ bool Chomp::optimize() {
 
 		this->calculate_smoothness_increments();
 		this->calculate_collision_increments();
-		this->calculate_dynamic_collision_increments();
+		if (this->human_map_.size() > 0) {
+			this->calculate_dynamic_collision_increments();
+		}
 		this->calculate_total_increments();
 		this->add_increments_to_trajectory();
 

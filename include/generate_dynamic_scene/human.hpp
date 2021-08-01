@@ -66,7 +66,7 @@ private:
 	int human_id_{0};
 	double start_time_;
 	bool if_add_{false};
-	double human_block_distance_{3};
+	double human_block_distance_{4};
 };
 
 }
