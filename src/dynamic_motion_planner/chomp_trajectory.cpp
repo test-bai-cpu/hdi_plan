@@ -2,12 +2,13 @@
 
 namespace hdi_plan {
 ChompTrajectory::ChompTrajectory(const std::vector<Eigen::Vector3d>& trajectory_points, const double start_time, const double end_time, const double discretization, const double speed) {
-	this->start_time_ = start_time - 20.0;
-	std::cout << "Chomp trajectory start optimization time is: " << start_time << std::endl;
+	//this->start_time_ = start_time - 20.0;
+	std::cout << "Chomp trajectory start optimization time is: " << start_time - 20.0 << std::endl;
 	this->end_time_ = end_time;
 	this->discretization_ = discretization;
 	this->speed_ = speed;
 	this->trajectory_points_ = trajectory_points;
+	this->set_start_time();
 	this->calculate_duration_and_points_num_for_full_trajectory();
 	this->update_trajectory_for_diff();
 	this->fill_discretized_points();
@@ -19,6 +20,10 @@ ChompTrajectory::ChompTrajectory(const Eigen::Vector3d& start_point, const Eigen
 }
 
 ChompTrajectory::~ChompTrajectory() = default;
+
+void ChompTrajectory::set_start_time() {
+	this->start_time_ = this->end_time_ - hdi_plan_utils::get_distance(this->trajectory_points_.front(), this->trajectory_points_.back())/this->speed_;
+}
 
 double ChompTrajectory::calculate_time_by_index(int index) {
 	// the index starts from 0
@@ -55,12 +60,14 @@ void ChompTrajectory::calculate_duration_and_points_num_for_full_trajectory() {
 		if (distance < discretize_length) {
 			total_number_of_points += 1;
 			this->group_number_.push_back(1);
+			last_point = path_point;
 			count += 1;
 			continue;
 		}
 		int number_of_interval_points = static_cast<int>(floor(distance/discretize_length));
 		total_number_of_points += number_of_interval_points;
 		this->group_number_.push_back(number_of_interval_points); // the number of group_number is vector(trajectory_points_) size -1
+		last_point = path_point;
 		count += 1;
 	}
 

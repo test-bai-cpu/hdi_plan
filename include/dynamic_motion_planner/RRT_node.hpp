@@ -49,7 +49,7 @@ public:
 
     void set_lmc(double lmc, bool if_inf = false) {
         if (if_inf) {
-            this->lmc_ = std::numeric_limits<double>::max();
+            this->lmc_ = std::numeric_limits<double>::infinity();
         } else {
             this->lmc_ = lmc;
         }
@@ -61,7 +61,7 @@ public:
 
     void set_g_cost(double g_cost, bool if_inf = false) {
         if (if_inf) {
-            this->g_cost_ = std::numeric_limits<double>::max();
+            this->g_cost_ = std::numeric_limits<double>::infinity();
         } else {
             this->g_cost_ = g_cost;
         }

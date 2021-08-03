@@ -9,8 +9,11 @@ GenerateObstacle::GenerateObstacle(const ros::NodeHandle &nh, const ros::NodeHan
 	this->update_human_obstacle_pub_ = nh_.advertise<hdi_plan::obstacle_info>("hdi_plan/obstacle_info_topic", 1);
 
 	// wait until human movement start
-	ros::Duration(20.0 + 5.0).sleep();
-	this->publish_human_movement_1();
+	ros::Duration(25.0 + 20.0).sleep();
+	this->publish_obstacle();
+	//ros::Duration(20.0 + 2.0 + 35.0).sleep();
+	//this->publish_obstacle2();
+	//this->publish_human_movement_1();
 	//ros::Duration(2.0).sleep();
 	//this->publish_human_movement_2();
 	//ros::Duration(21.0).sleep();
@@ -34,12 +37,24 @@ hdi_plan::obstacle_info GenerateObstacle::get_obstacle_message(bool operation, i
 
 void GenerateObstacle::publish_obstacle() {
 	hdi_plan::obstacle_info obstacle_msg;
-	obstacle_msg.name = "cube";
-	obstacle_msg.type = hdi_plan::Obstacle_type::cube;
+	obstacle_msg.name = "sphere1";
+	obstacle_msg.type = hdi_plan::Obstacle_type::sphere;
 	obstacle_msg.operation = true;
-	obstacle_msg.size = 6;
+	obstacle_msg.size = 5;
 	obstacle_msg.position.x = 10.0;
-	obstacle_msg.position.y = 10.0;
+	obstacle_msg.position.y = 5.0;
+	obstacle_msg.position.z = 2.0;
+	update_human_obstacle_pub_.publish(obstacle_msg);
+}
+
+void GenerateObstacle::publish_obstacle2() {
+	hdi_plan::obstacle_info obstacle_msg;
+	obstacle_msg.name = "sphere2";
+	obstacle_msg.type = hdi_plan::Obstacle_type::sphere;
+	obstacle_msg.operation = true;
+	obstacle_msg.size = 5;
+	obstacle_msg.position.x = 10.0;
+	obstacle_msg.position.y = 5.0;
 	obstacle_msg.position.z = 2.0;
 	update_human_obstacle_pub_.publish(obstacle_msg);
 }

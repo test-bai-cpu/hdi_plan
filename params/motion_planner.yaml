@@ -1,5 +1,5 @@
-start_position: [1,1,2]
-goal_position: [20,20,2]
+start_position: [1,5,2]
+goal_position: [20,5,2]
 total_planning_time: 30.0
 
 max_distance: 1
@@ -23,7 +23,7 @@ obstacle_cost_weight: 0.1
 dynamic_obstacle_cost_weight: 0.1
 dynamic_collision_factor: 0.1
 
-smoothness_cost_weight: 0.5
+smoothness_cost_weight: 0.1
 smoothness_cost_velocity: 0.0
 smoothness_cost_acceleration: 1.0
 smoothness_cost_jerk: 0.0

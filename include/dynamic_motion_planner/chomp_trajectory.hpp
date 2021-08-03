@@ -106,6 +106,7 @@ private:
 	void fill_trajectory();
 	void fill_discretized_points();
 	Eigen::Vector3d calculate_position_by_index(int index);
+	void set_start_time();
 };
 
 

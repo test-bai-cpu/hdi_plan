@@ -328,6 +328,7 @@ double Chomp::get_dynamic_potential(const Eigen::Vector3d& point, int index) {
 		Eigen::Vector2d point_position(point(0), point(1));
 		double distance = hdi_plan_utils::get_distance_2d(point_position, predicted_position) -
 						  this->quadrotor_radius_ - (human.second->get_human_block_distance());
+		//std::cout << "the dynamic distance is: " << distance << " . The point time is: " << point_time << std::endl;
 		if (distance < distance_to_nearest_dynamic_obstacle) distance_to_nearest_dynamic_obstacle = distance;
 	}
 
@@ -341,6 +342,7 @@ double Chomp::get_dynamic_potential(const Eigen::Vector3d& point, int index) {
 	} else {
 		this->is_collsion_free_ = false;
 		potential = -distance_to_nearest_dynamic_obstacle + 0.5 * this->min_clearence_;
+		//std::cout << "the dynamic potential is: " << potential << ". And final is: " << potential * exp(-this->dynamic_collision_factor_ * point_time) << std::endl;
 	}
 
 	return potential * exp(-this->dynamic_collision_factor_ * point_time);
