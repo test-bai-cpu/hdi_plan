@@ -59,6 +59,7 @@ private:
 	void publish_human_movement_2();
 	void publish_obstacle();
 	void publish_obstacle2();
+	void remove_obstacle();
     double get_distance(const Eigen::Vector2d &point1, const Eigen::Vector2d &point2);
     hdi_plan::obstacle_info get_obstacle_message(bool operation, int human_id, double position_x = 100.0, double position_y = 100.0);
     //void publish_trajectory();

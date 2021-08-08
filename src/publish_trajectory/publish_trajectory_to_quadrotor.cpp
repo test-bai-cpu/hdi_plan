@@ -72,7 +72,7 @@ void PublishTrajectory::trajectory_callback(const hdi_plan::point_array::ConstPt
 	geometry_msgs::PoseStamped go_to_pose_msg;
 	bool find_current_position = false;
 	for (int i = 0; i < trajectory_size; i++) {
-		if ((i > 4) && (i%5 != 1) && (i != trajectory_size-1)) continue;
+		//if ((i%2 != 1) && (i != trajectory_size-1)) continue;
 		
 		if (this->if_get_new_path_) {
 			ROS_INFO("Now break the previous callback");
@@ -84,21 +84,22 @@ void PublishTrajectory::trajectory_callback(const hdi_plan::point_array::ConstPt
 			i = trajectory_size-1;
 		}
 		
-		if ((!find_current_position) && (i<20)) {
+		/*
+		if (!find_current_position) {
 			Eigen::Vector3d traj_point(msg->points[i].x, msg->points[i].y, msg->points[i].z);
 			double distance = hdi_plan_utils::get_distance(traj_point, this->quadrotor_state_);
-			if (distance < 0.5) find_current_position = true;
+			if (distance < 1.0) find_current_position = true;
 			continue;
-		}
+		}*/
 
 		go_to_pose_msg.pose.position.x = msg->points[i].x;
 		go_to_pose_msg.pose.position.y = msg->points[i].y;
 		go_to_pose_msg.pose.position.z = msg->points[i].z;
 		//this->go_to_pose_pub_.publish(go_to_pose_msg);
 		this->pub_solution_path_.publish(go_to_pose_msg);
-		//std::cout << "The executed position is: " << msg->points[i].x << " " << msg->points[i].y << " " << msg->points[i].z << std::endl;
+		std::cout << "The executed position is: " << msg->points[i].x << " " << msg->points[i].y << " " << msg->points[i].z << std::endl;
 		this->executed_path_file << msg->points[i].x << " " << msg->points[i].y << " " << msg->points[i].z << "\n";
-		ros::Duration(0.5).sleep();
+		ros::Duration(1.0).sleep();
 	}
 }
 

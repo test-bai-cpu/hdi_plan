@@ -23,11 +23,12 @@
 namespace hdi_plan {
 class Chomp {
 public:
-	Chomp(const double collision_threshold, const double planning_time_limit, const int max_iterations, const int max_iterations_after_collision_free,
-		  const double learning_rate, const double obstacle_cost_weight, const double dynamic_obstacle_cost_weight, const double dynamic_collision_factor,
-		  const double smoothness_cost_weight, const double smoothness_cost_velocity, const double smoothness_cost_acceleration, const double smoothness_cost_jerk,
-		  const double ridge_factor, const double min_clearence, const double joint_update_limit, const double quadrotor_radius,
-		  const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<std::string, std::shared_ptr<Obstacle>>& obstacle_map, const std::map<int, std::shared_ptr<Human>>& human_map);
+	Chomp(double collision_threshold, double planning_time_limit, int max_iterations, int max_iterations_after_collision_free,
+		  double learning_rate, double obstacle_cost_weight, double dynamic_obstacle_cost_weight, double dynamic_collision_factor,
+		  double smoothness_cost_weight, double smoothness_cost_velocity, double smoothness_cost_acceleration, double smoothness_cost_jerk,
+		  double ridge_factor, double min_clearence, double joint_update_limit, double quadrotor_radius,
+		  const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<std::string, std::shared_ptr<Obstacle>>& obstacle_map,
+		  const std::map<int, std::shared_ptr<Human>>& human_map, int chomp_path_file_num);
 	~Chomp();
 
 	std::vector<Eigen::Vector3d> get_optimized_trajectory() const {
@@ -52,6 +53,9 @@ private:
 	int collision_free_iteration_{0};
 	bool filter_mode_{false};
 	double collision_threshold_{0.07};
+
+	// export data
+	int chomp_path_file_num_{0};
 
 	// joint
 	int num_joints_{3};

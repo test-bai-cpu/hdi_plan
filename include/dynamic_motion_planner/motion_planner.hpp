@@ -35,11 +35,8 @@
 #include <std_msgs/Bool.h>
 
 //hdi_plan
-#include "dynamic_motion_planner/node_list.hpp"
-#include "dynamic_motion_planner/edge.hpp"
 #include "dynamic_motion_planner/quadrotor.hpp"
 #include "dynamic_motion_planner/RRT_node.hpp"
-#include "dynamic_motion_planner/space.hpp"
 #include "dynamic_motion_planner/chomp.hpp"
 #include "dynamic_motion_planner/chomp_trajectory.hpp"
 #include "utils/types.hpp"
@@ -67,6 +64,10 @@ private:
     int iteration_count{0};
     bool if_find_solution_{false};
     std::ofstream solve_time_path_file;
+	std::ofstream drone_actual_path_file;
+	void visualize_node_tree();
+
+	double get_distance_check_ob(const std::shared_ptr<RRTNode>& node1, const std::shared_ptr<RRTNode>& node2);
 
     // drone
     double quadrotor_radius_{0.5};
@@ -132,11 +133,16 @@ private:
     // main loop
     bool solve();
 
+	// RRTX node
+	int node_index_{0};
+	std::vector<std::shared_ptr<RRTNode>> node_list_;
+	void add_node_to_nearest_neighbors_tree(const std::shared_ptr<RRTNode>& node);
+
     // for calculate the shrinking ball radius
     void calculateRRG();
     double max_distance_{1}; // the maximum length of a motion to be added to a tree
-    double r_rrt_{1}; // a constant for r-disc rewiring calculations
-    double rrg_r_{1.5}; // current value of the radius used for the neighbors
+    double r_rrt_{5}; // a constant for r-disc rewiring calculations
+    double rrg_r_{3}; // current value of the radius used for the neighbors
 
     // functions in the main loop
     void saturate(std::shared_ptr<RRTNode> random_node, const std::shared_ptr<RRTNode>& nearest_node, double distance) const;
@@ -160,16 +166,24 @@ private:
     // cannot use priority queue since we need to update the key value
     //std::priority_queue<std::shared_ptr<RRTNode>, std::vector<std::shared_ptr<RRTNode>>, node_compare> node_queue1;
     ompl::BinaryHeap<std::shared_ptr<RRTNode>, RRTNode::node_compare> node_queue;
-    void rewire_neighbors(std::shared_ptr<RRTNode> random_node);
+	void rewire_neighbors_v1(std::shared_ptr<RRTNode> random_node);
+	void rewire_neighbors_v2(std::shared_ptr<RRTNode> random_node);
+	void rewire_neighbors_for_env_update(std::shared_ptr<RRTNode> random_node);
     void cull_neighbors(std::shared_ptr<RRTNode> random_node);
     void verify_queue(std::shared_ptr<RRTNode> node);
-    void reduce_inconsistency();
+	void reduce_inconsistency_v1();
+	void reduce_inconsistency_v2();
     void reduce_inconsistency_for_env_update();
+	void update_lmc_v1(std::shared_ptr<RRTNode> node);
+    void update_lmc_v2(std::shared_ptr<RRTNode> node);
     void update_lmc(std::shared_ptr<RRTNode> node);
-
+	void update_lmc_for_env_update(std::shared_ptr<RRTNode> node);
     // find the solution path
     std::vector<Eigen::Vector3d> solution_path;
+	std::vector<Eigen::Vector3d> solution_path_tmp;
+
     bool update_solution_path();
+	bool update_solution_path_tmp();
     void publish_solution_path();
     void optimize_solution_path();
 
@@ -182,6 +196,7 @@ private:
     void add_obstacle(const std::shared_ptr<Obstacle>& obstacle);
     void propogate_descendants();
     bool check_if_node_inside_obstacle(const std::shared_ptr<Obstacle>& obstacle, const std::shared_ptr<RRTNode>& node);
+	bool check_if_node_inside_obstacle_for_adding_ob(const std::shared_ptr<Obstacle>& obstacle, const std::shared_ptr<RRTNode>& node);
 	bool check_if_node_inside_all_obstacles(const std::shared_ptr<RRTNode>& node, bool consider_human);
 	std::vector<std::shared_ptr<RRTNode>> orphan_node_list;
 	void verify_orphan(std::shared_ptr<RRTNode> node);
@@ -214,6 +229,7 @@ private:
 
     // path write to file name
     int path_file_num_{0};
+    int chomp_path_file_num_{0};
 
     // chomp trajectory
 	double discretization_;

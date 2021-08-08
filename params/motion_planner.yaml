@@ -1,10 +1,10 @@
-start_position: [1,5,2]
-goal_position: [20,5,2]
+start_position: [1,1,2]
+goal_position: [20,20,2]
 total_planning_time: 30.0
 
 max_distance: 1
-r_rrt: 1
-rrg_r: 1.5
+r_rrt: 10
+rrg_r: 2
 epsilon: 0.5
 
 quadrotor_speed: 1

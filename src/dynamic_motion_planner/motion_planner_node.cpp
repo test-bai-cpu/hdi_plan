@@ -5,9 +5,9 @@
 int main(int argc, char** argv) {
     ros::init(argc, argv, "motion_planner");
     hdi_plan::MotionPlanner motion_planner(ros::NodeHandle(""), ros::NodeHandle("~"));
-    //ros::spin();
-    ros::AsyncSpinner spinner(0);
-	spinner.start();
-	ros::waitForShutdown();
+    ros::spin();
+    //ros::AsyncSpinner spinner(0);
+	//spinner.start();
+	//ros::waitForShutdown();
     return 0;
 }

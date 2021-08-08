@@ -2,11 +2,12 @@
 
 namespace hdi_plan {
 
-Chomp::Chomp(const double collision_threshold, const double planning_time_limit, const int max_iterations, const int max_iterations_after_collision_free,
-	         const double learning_rate, const double obstacle_cost_weight, const double dynamic_obstacle_cost_weight, const double dynamic_collision_factor,
-	         const double smoothness_cost_weight, const double smoothness_cost_velocity, const double smoothness_cost_acceleration, const double smoothness_cost_jerk,
-	         const double ridge_factor, const double min_clearence, const double joint_update_limit, const double quadrotor_radius,
-			 const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<std::string, std::shared_ptr<Obstacle>>& obstacle_map, const std::map<int, std::shared_ptr<Human>>& human_map
+Chomp::Chomp(double collision_threshold, double planning_time_limit, int max_iterations, int max_iterations_after_collision_free,
+	         double learning_rate, double obstacle_cost_weight, double dynamic_obstacle_cost_weight, double dynamic_collision_factor,
+	         double smoothness_cost_weight, double smoothness_cost_velocity, double smoothness_cost_acceleration, double smoothness_cost_jerk,
+	         double ridge_factor, double min_clearence, double joint_update_limit, double quadrotor_radius,
+			 const std::shared_ptr<ChompTrajectory>& trajectory, const std::map<std::string, std::shared_ptr<Obstacle>>& obstacle_map,
+			 const std::map<int, std::shared_ptr<Human>>& human_map, int chomp_path_file_num
 ):  collision_threshold_(collision_threshold),
 	planning_time_limit_(planning_time_limit),
 	max_iterations_(max_iterations),
@@ -22,7 +23,8 @@ Chomp::Chomp(const double collision_threshold, const double planning_time_limit,
 	ridge_factor_(ridge_factor),
 	min_clearence_(min_clearence),
 	joint_update_limit_(joint_update_limit),
-	quadrotor_radius_(quadrotor_radius){
+	quadrotor_radius_(quadrotor_radius),
+	chomp_path_file_num_(chomp_path_file_num){
 	//ROS_INFO("Start in the chomp");
 	this->full_trajectory_ = trajectory;
 	this->obstacle_map_ = obstacle_map;
@@ -119,7 +121,7 @@ void Chomp::initialize() {
 
 bool Chomp::optimize() {
 	ros::WallTime start_time = ros::WallTime::now();
-	std::string file_name = "chomp_cost.txt";
+	std::string file_name = "chomp_cost_" + std::to_string(this->chomp_path_file_num_) + ".txt";
 	this->chomp_cost_file.open(file_name);
 	for (this->iteration_=0; this->iteration_ < this->max_iterations_; this->iteration_++) {
 		//std::cout << "The iteration number is: " << this->iteration_ << std::endl;
@@ -258,9 +260,10 @@ double Chomp::get_potential(const Eigen::Vector3d& point) {
 }
 
 void Chomp::export_potential_data(bool if_dynamic) {
-	std::string file_name = "potential.txt";
-	if (if_dynamic) file_name = "dynamic_potential.txt";
+	std::string file_start_name = "potential_";
+	if (if_dynamic) file_start_name = "dynamic_potential_";
 
+	std::string file_name = file_start_name + std::to_string(this->chomp_path_file_num_) + ".txt";
 	std::ofstream data_file (file_name);
 
 	if (if_dynamic) {
@@ -279,9 +282,10 @@ void Chomp::export_potential_data(bool if_dynamic) {
 }
 
 void Chomp::export_potential_gradient_data(bool if_dynamic) {
-	std::string file_name = "potential_gradient.txt";
-	if (if_dynamic) file_name = "dynamic_potential_gradient.txt";
+	std::string file_start_name = "potential_gradient_";
+	if (if_dynamic) file_start_name = "dynamic_potential_gradient_";
 
+	std::string file_name = file_start_name + std::to_string(this->chomp_path_file_num_) + ".txt";
 	std::ofstream data_file (file_name);
 
 	if (if_dynamic) {

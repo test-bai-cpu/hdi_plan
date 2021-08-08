@@ -5,6 +5,7 @@
 #include <Eigen/Dense>
 #include <iostream>
 #include <memory>
+#include <vector>
 #include <limits>
 #include <ompl/datastructures/BinaryHeap.h>
 
@@ -13,8 +14,7 @@ namespace hdi_plan {
 class RRTNode {
 public:
     RRTNode() = default;
-	RRTNode(Eigen::Vector3d state);
-    RRTNode(Eigen::Vector3d state, double time_from_start);
+    RRTNode(Eigen::Vector3d state, double time_from_start = 0);
     ~RRTNode();
 
     // for nearest neighbor tree
@@ -91,6 +91,18 @@ public:
         this->state_(2) = z;
     };
 
+    int get_unique_id() {
+    	return this->unique_id_;
+    }
+
+    void set_unique_id(int unique_id) {
+    	this->unique_id_ = unique_id;
+    }
+
+    void add_to_neighbor_edge_list(double edge);
+    void update_neighbor_edge_list(int neighbor_index, double edge);
+
+    double get_neighbor_edge(int neighbor_index);
 private:
     // state of quadrotor
     Eigen::Vector3d state_;
@@ -101,6 +113,10 @@ private:
 
     // time from start
 	double time_{0};
+
+	int unique_id_;
+
+	std::vector<double> neighbor_edge_list_;
 };
 
 

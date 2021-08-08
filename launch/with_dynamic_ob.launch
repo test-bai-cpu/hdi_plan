@@ -102,10 +102,6 @@
             <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
         </node>
 
-        <node name="path_visualization_node" pkg="hdi_plan" type="path_visualization_node" output="screen" >
-            <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
-        </node>
-
     </group>
 
 </launch>
