@@ -67,6 +67,8 @@ private:
 	double start_time_;
 	bool if_add_{false};
 	double human_block_distance_{4};
+	double planning_horizon_time_{15};
+	double quadrotor_radius_{0.5};
 };
 
 }

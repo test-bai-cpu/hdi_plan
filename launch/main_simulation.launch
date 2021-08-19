@@ -2,8 +2,9 @@
 <launch>
     <arg name="debug" default="0" />
 
-    <node name="path_visualization_node" pkg="hdi_plan" type="path_visualization_node" output="screen" >
-        <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
+    <node name="generate_dynamic_scene_node" pkg="hdi_plan" type="generate_dynamic_scene_node" output="screen">
+      <rosparam file="$(find hdi_plan)/params/motion_planner_tmp.yaml" />
+      <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
     </node>
 
 </launch>

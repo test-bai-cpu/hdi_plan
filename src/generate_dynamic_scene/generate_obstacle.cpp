@@ -9,11 +9,11 @@ GenerateObstacle::GenerateObstacle(const ros::NodeHandle &nh, const ros::NodeHan
 	this->update_human_obstacle_pub_ = nh_.advertise<hdi_plan::obstacle_info>("hdi_plan/obstacle_info_topic", 1);
 
 	// wait until human movement start
-	//ros::Duration(25.0 + 20.0).sleep();
+	//ros::Duration(22.0 + 40.0).sleep();
 	//this->publish_obstacle();
 	//ros::Duration(5.0).sleep();
 	//this->remove_obstacle();
-	ros::Duration(25.0 + 20.0).sleep();
+	ros::Duration(24.5 + 40.0).sleep();
 	this->publish_human_movement_1();
 }
 
@@ -69,7 +69,7 @@ void GenerateObstacle::publish_obstacle2() {
 }
 
 void GenerateObstacle::publish_human_movement_1() {
-	Eigen::Vector2d start_point(10.0, -8.0);
+	Eigen::Vector2d start_point(10.0, -3.0);
 	Eigen::Vector2d goal_point(10.0, 20.0);
 	Eigen::Vector2d current_point(start_point(0), start_point(1));
 	double distance = hdi_plan_utils::get_distance_2d(start_point, goal_point);
@@ -219,102 +219,140 @@ namespace hdi_plan {
 GenerateObstacle::GenerateObstacle(const ros::NodeHandle &nh, const ros::NodeHandle &pnh)
 		: nh_(nh),
 		  pnh_(pnh) {
-	this->human_movement_pub_ = nh_.advertise<geometry_msgs::Point>("hdi_plan/human_movement", 1);
-	this->update_human_obstacle_pub_ = nh_.advertise<hdi_plan::obstacle_info>("hdi_plan/obstacle_info_topic", 1);
-	this->pub_optimized_path_ = nh_.advertise<hdi_plan::point_array>("hdi_plan/full_trajectory", 1);
-	this->pub_get_new_path_ = nh_.advertise<std_msgs::Bool>("hdi_plan/get_new_path", 1);
-	ros::Duration(25.0).sleep();
-	this->publish_trajectory();
+	// load parameters
+	if (!this->load_params()) {
+		ROS_WARN("[%s] Could not load all parameters in motion planner.",
+				 this->pnh_.getNamespace().c_str());
+	} else {
+		ROS_INFO("[%s] Loaded all parameters in motion planner.", this->pnh_.getNamespace().c_str());
+	}
+	ros::Duration(1.0).sleep();
+	publish_trajectory();
+	ROS_INFO("FInished");
 }
 
 GenerateObstacle::~GenerateObstacle() = default;
 
+
+bool GenerateObstacle::load_params() {
+	this->pnh_.getParam("total_planning_time", this->total_plan_time_);
+	this->pnh_.getParam("quadrotor_radius", this->quadrotor_radius_);
+	this->pnh_.getParam("quadrotor_speed", this->quadrotor_speed_);
+	this->pnh_.getParam("collision_threshold", this->collision_threshold_);
+	this->pnh_.getParam("planning_time_limit", this->planning_time_limit_);
+	this->pnh_.getParam("max_iterations", this->max_iterations_);
+	this->pnh_.getParam("max_iterations_after_collision_free", this->max_iterations_after_collision_free_);
+	this->pnh_.getParam("learning_rate", this->learning_rate_);
+	this->pnh_.getParam("obstacle_cost_weight", this->obstacle_cost_weight_);
+	this->pnh_.getParam("dynamic_obstacle_cost_weight", this->dynamic_obstacle_cost_weight_);
+	this->pnh_.getParam("dynamic_collision_factor", this->dynamic_collision_factor_);
+	this->pnh_.getParam("smoothness_cost_weight", this->smoothness_cost_weight_);
+	this->pnh_.getParam("smoothness_cost_velocity", this->smoothness_cost_velocity_);
+	this->pnh_.getParam("smoothness_cost_acceleration", this->smoothness_cost_acceleration_);
+	this->pnh_.getParam("smoothness_cost_jerk", this->smoothness_cost_jerk_);
+	this->pnh_.getParam("ridge_factor", this->ridge_factor_);
+	this->pnh_.getParam("min_clearence", this->min_clearence_);
+	this->pnh_.getParam("joint_update_limit", this->joint_update_limit_);
+	this->pnh_.getParam("discretization", this->discretization_);
+
+	return true;
+}
+
 void GenerateObstacle::publish_trajectory() {
 
 	std::vector<Eigen::Vector3d> solution_path;
-	solution_path.resize(11);
-	Eigen::Vector3d point_1(0.0, 4.0, 1.0);
+	solution_path.resize(12);
+	Eigen::Vector3d point_1(0.956614, 1.28775, 1.85346);
 	solution_path[0] = point_1;
-	Eigen::Vector3d point_2(1.0, 4.0, 1.0);
+	Eigen::Vector3d point_2(2.113, 2.84397, 1.64631);
 	solution_path[1] = point_2;
-	Eigen::Vector3d point_3(2.0, 4.0, 1.0);
+	Eigen::Vector3d point_3(4.68187, 4.58535, 1.7791);
 	solution_path[2] = point_3;
-	Eigen::Vector3d point_4(3.0, 4.0, 1.0);
+	Eigen::Vector3d point_4(5.99614, 5.5577, 1.55252);
 	solution_path[3] = point_4;
-	Eigen::Vector3d point_5(4.0, 4.0, 1.0);
-
+	Eigen::Vector3d point_5(7.84038, 6.813, 1.38858);
 	solution_path[4] = point_5;
-	Eigen::Vector3d point_6(5.0, 4.0, 1.0);
+	Eigen::Vector3d point_6(10.1752, 8.6619, 1.82541);
 	solution_path[5] = point_6;
-	Eigen::Vector3d point_7(6.0, 4.0, 1.0);
+	Eigen::Vector3d point_7(11.93, 10.3711, 1.74491);
 	solution_path[6] = point_7;
-	Eigen::Vector3d point_8(7.0, 4.0, 1.0);
+	Eigen::Vector3d point_8(13.9606, 12.1169, 1.28471);
 	solution_path[7] = point_8;
-	Eigen::Vector3d point_9(8.0, 4.0, 1.0);
+	Eigen::Vector3d point_9(14.112, 13.3455, 1.52649);
 	solution_path[8] = point_9;
-	Eigen::Vector3d point_10(9.0, 4.0, 1.0);
+	Eigen::Vector3d point_10(16.3847, 15.4567, 1.75421);
 	solution_path[9] = point_10;
-	Eigen::Vector3d point_11(10.0, 4.0, 1.0);
+	Eigen::Vector3d point_11(18.6264, 17.2791, 1.21986);
 	solution_path[10] = point_11;
+	Eigen::Vector3d point_12(20, 20, 2);
+	solution_path[11] = point_12;
 
-	std::vector<Eigen::Vector3d> test_path;
-	test_path.resize(1);
-	Eigen::Vector3d point_test(0.0, 4.0, 1.0);
-	test_path[0] = point_test;
+	std::vector<Eigen::Vector3d> solution_path;
+	solution_path.resize(9);
+	Eigen::Vector3d point_1(4.55281, 4.11356, 1.49805);
+	solution_path[0] = point_1;
+	Eigen::Vector3d point_2(3.78132, 6.6611, 1.01547);
+	solution_path[1] = point_2;
+	Eigen::Vector3d point_3(5.02077, 8.07318, 2.01937);
+	solution_path[2] = point_3;
+	Eigen::Vector3d point_4(5.65907, 9.77609, 1.20362);
+	solution_path[3] = point_4;
+	Eigen::Vector3d point_5(6.77827, 11.9087, 1.74742);
+	solution_path[4] = point_5;
+	Eigen::Vector3d point_6(7.67982, 15.0323, 1.52923);
+	solution_path[5] = point_6;
+	Eigen::Vector3d point_7(10.43, 17.0713, 1.81861);
+	solution_path[6] = point_7;
+	Eigen::Vector3d point_8(13.3463, 17.6473, 1.11981);
+	solution_path[7] = point_8;
+	Eigen::Vector3d point_9(16.4863, 18.2276, 1.60694);
+	solution_path[7] = point_9;
+	Eigen::Vector3d point_10(17.9467, 18.4052, 1.66529);
+	solution_path[8] = point_10;
+	Eigen::Vector3d point_11(20, 20, 2);
+	solution_path[8] = point_11;
 
+	std::ofstream data_file2("original_trajectory.txt");
+	for (int i = 0; i < static_cast<int>(solution_path.size()); i++) {
+		Eigen::Vector3d point = solution_path.at(i);
+		data_file2 << point(0) << " " << point(1) << " " << point(2) << "\n";
+	}
+	if (data_file2.is_open()) {
+		data_file2.close();
+	}
 
 	std::map<std::string, std::shared_ptr<hdi_plan::Obstacle>> obstacle_map;
+	std::map<int, std::shared_ptr<Human>> human_map;
 	std::string obstacle_name = "cube1";
 	bool obstacle_operation = true;
-	double obstacle_size = 0.5;
-	Eigen::Vector3d obstacle_position(4.0, 4.0, 1.0);
-	//Eigen::Vector3d obstacle_position(100.0, 100.0, 100);
-	auto obstacle = std::make_shared<hdi_plan::Obstacle>(obstacle_name, hdi_plan::Obstacle_type::cube,
-														 obstacle_operation, obstacle_size, obstacle_position);
+	double obstacle_size = 3;
+	Eigen::Vector3d obstacle_position(10.0, 10.0, 2.0);
+	auto obstacle = std::make_shared<hdi_plan::Obstacle>(obstacle_name, hdi_plan::Obstacle_type::sphere, obstacle_operation, obstacle_size, obstacle_position);
 	obstacle_map[obstacle_name] = obstacle;
+	
 
 	ros::WallTime chomp_start_time = ros::WallTime::now();
-	auto chomp_trajectory = std::make_shared<hdi_plan::ChompTrajectory>(solution_path);
-	auto chomp = std::make_shared<hdi_plan::Chomp>(chomp_trajectory, obstacle_map);
+
+	auto chomp_trajectory = std::make_shared<ChompTrajectory>(solution_path, 1.0 , this->total_plan_time_, this->discretization_, this->quadrotor_speed_);
+	auto chomp = std::make_shared<Chomp>(this->collision_threshold_, this->planning_time_limit_, this->max_iterations_,
+									    this->max_iterations_after_collision_free_, this->learning_rate_, this->obstacle_cost_weight_, this->dynamic_obstacle_cost_weight_,
+									    this->dynamic_collision_factor_, this->smoothness_cost_weight_, this->smoothness_cost_velocity_, this->smoothness_cost_acceleration_,
+									    this->smoothness_cost_jerk_, this->ridge_factor_, this->min_clearence_, this->joint_update_limit_, this->quadrotor_radius_,
+										chomp_trajectory, obstacle_map, human_map, 1);
+
 	std::vector<Eigen::Vector3d> optimized_trajectory = chomp->get_optimized_trajectory();
 
 	double chomp_process_time = (ros::WallTime::now() - chomp_start_time).toSec();
 	std::cout << "The optimization time is: " << chomp_process_time << std::endl;
 
 
-
-	int trajectory_size = optimized_trajectory.size();
-	std::ofstream data_file("data.txt");
-	for (int i = 0; i < trajectory_size; i++) {
+	std::ofstream data_file1("optimized_trajectory.txt");
+	for (int i = 0; i < static_cast<int>(optimized_trajectory.size()); i++) {
 		Eigen::Vector3d point = optimized_trajectory.at(i);
-		//ROS_INFO("the optimized trajectory is: x=%.2f, y=%.2f, z=%.2f", point(0), point(1), point(2));
-		//std::cout << point(0) << " " << point(1) << std::endl;
-		data_file << point(0) << " " << point(1) << "\n";
+		data_file1 << point(0) << " " << point(1) << " " << point(2) << "\n";
 	}
-	if (data_file.is_open()) {
-		data_file.close();
-	}
-
-
-	ROS_INFO("Start to publish the trajectory message.");
-
-	for (int j = 0; j < 1; j++) {
-		hdi_plan::point_array trajectory_msg;
-		int trajectory_size = test_path.size();
-		geometry_msgs::Point trajectory_point;
-		for (int i = 0; i < trajectory_size; i++) {
-			Eigen::Vector3d point = test_path.at(i);
-			trajectory_point.x = 0.0;
-			trajectory_point.y = 4.0;
-			trajectory_point.z = 1.0;
-			trajectory_msg.points.push_back(trajectory_point);
-			//ROS_INFO("publish trajectory is: x=%.2f, y=%.2f, z=%.2f", point(0), point(1), point(2));
-		}
-		//ros::Duration(5.0).sleep();
-		ROS_INFO("###Pub a new path");
-		std::cout << "The trajectory size is " << trajectory_msg.points.size() << std::endl;
-		pub_optimized_path_.publish(trajectory_msg);
+	if (data_file1.is_open()) {
+		data_file1.close();
 	}
 	}
-}
-*/
+}*/

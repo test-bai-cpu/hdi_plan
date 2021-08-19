@@ -242,17 +242,14 @@ Eigen::Vector3d Chomp::get_dynamic_distance_gradient(const Eigen::Vector3d& poin
 double Chomp::get_potential(const Eigen::Vector3d& point) {
 	double distance_to_nearest_obstacle = std::numeric_limits<double>::infinity();
 	for (auto obstacle : this->obstacle_map_) {
-		double distance = hdi_plan_utils::get_distance(point, obstacle.second->get_position()) -
-				this->quadrotor_radius_ - (obstacle.second->get_size()/2.0);
+		double distance = hdi_plan_utils::get_distance(point, obstacle.second->get_position()) - this->quadrotor_radius_ - obstacle.second->get_size();
 		if (distance < distance_to_nearest_obstacle) distance_to_nearest_obstacle = distance;
 	}
 
 	if (distance_to_nearest_obstacle >= this->min_clearence_) {
 		return 0.0;
 	} else if (distance_to_nearest_obstacle >= 0.0) {
-		const double diff = distance_to_nearest_obstacle - this->min_clearence_;
-		const double gradient_magnitude = diff / this->min_clearence_;
-		return 0.5 * gradient_magnitude * diff;
+		return 0.5 * pow(this->min_clearence_-distance_to_nearest_obstacle, 2.0) / this->min_clearence_;
 	} else {
 		this->is_collsion_free_ = false;
 		return -distance_to_nearest_obstacle + 0.5 * this->min_clearence_;
@@ -315,9 +312,7 @@ double Chomp::get_potential_for_gradient(double x, double y, double z) {
 	if (distance_to_nearest_obstacle >= this->min_clearence_) {
 		return 0.0;
 	} else if (distance_to_nearest_obstacle >= 0.0) {
-		const double diff = distance_to_nearest_obstacle - this->min_clearence_;
-		const double gradient_magnitude = diff / this->min_clearence_;
-		return 0.5 * gradient_magnitude * diff;
+		return 0.5 * pow(this->min_clearence_-distance_to_nearest_obstacle, 2.0) / this->min_clearence_;
 	} else {
 		this->is_collsion_free_ = false;
 		return -distance_to_nearest_obstacle + 0.5 * this->min_clearence_;
@@ -340,16 +335,20 @@ double Chomp::get_dynamic_potential(const Eigen::Vector3d& point, int index) {
 	if (distance_to_nearest_dynamic_obstacle >= this->min_clearence_) {
 		potential = 0.0;
 	} else if (distance_to_nearest_dynamic_obstacle >= 0.0) {
-		const double diff = distance_to_nearest_dynamic_obstacle - this->min_clearence_;
-		const double gradient_magnitude = diff / this->min_clearence_;
-		potential = 0.5 * gradient_magnitude * diff;
+		potential = 0.5 * pow(this->min_clearence_-distance_to_nearest_dynamic_obstacle, 2.0) / this->min_clearence_;
 	} else {
 		this->is_collsion_free_ = false;
 		potential = -distance_to_nearest_dynamic_obstacle + 0.5 * this->min_clearence_;
-		//std::cout << "the dynamic potential is: " << potential << ". And final is: " << potential * exp(-this->dynamic_collision_factor_ * point_time) << std::endl;
+		//std::cout << "the dynamic potential is: " << potential << ". And final is: " << potential * exp(-this->dynamic_collision_factor_ * point_time) << " And the point time is: " << point_time << std::endl;
 	}
 
-	return potential * exp(-this->dynamic_collision_factor_ * point_time);
+	//return potential;
+	
+	if (static_cast<double>(index) < static_cast<double>(this->num_vars_all_) * 0.4) {
+		return potential * exp(-this->dynamic_collision_factor_ * point_time);
+	} else {
+		return potential;
+	}
 }
 
 
@@ -368,15 +367,19 @@ double Chomp::get_dynamic_potential_for_gradient(double x, double y, double z, i
 	if (distance_to_nearest_dynamic_obstacle >= this->min_clearence_) {
 		potential = 0.0;
 	} else if (distance_to_nearest_dynamic_obstacle >= 0.0) {
-		const double diff = distance_to_nearest_dynamic_obstacle - this->min_clearence_;
-		const double gradient_magnitude = diff / this->min_clearence_;
-		potential = 0.5 * gradient_magnitude * diff;
+		potential = 0.5 * pow(this->min_clearence_-distance_to_nearest_dynamic_obstacle, 2.0) / this->min_clearence_;
 	} else {
 		this->is_collsion_free_ = false;
 		potential = -distance_to_nearest_dynamic_obstacle + 0.5 * this->min_clearence_;
 	}
 
-	return potential * exp(-this->dynamic_collision_factor_ * point_time);
+	//return potential;
+	
+	if (static_cast<double>(index) < static_cast<double>(this->num_vars_all_) * 0.4) {
+		return potential * exp(-this->dynamic_collision_factor_ * point_time);
+	} else {
+		return potential;
+	}
 }
 
 double Chomp::get_collision_cost() {

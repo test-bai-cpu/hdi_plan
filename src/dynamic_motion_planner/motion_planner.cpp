@@ -25,7 +25,7 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh, const ros::NodeHandle &p
     ROS_INFO("Initialization");
 	this->add_node_to_nearest_neighbors_tree(this->goal_);
 
-	this->start_time_ = ros::Time::now();
+	this->start_time_ = ros::WallTime::now();
 	//this->initiate_obstacles();
 
     // initialization subscribers
@@ -282,8 +282,9 @@ void MotionPlanner::obstacle_info_callback(const hdi_plan::obstacle_info::ConstP
 		std::cout << "Initialize human_" << human_id << " now." << std::endl;
 		this->human_id_list_.push_back(human_id);
 		this->exist_human_ = true;
-		ros::Time human_start_time = ros::Time::now();
+		ros::WallTime human_start_time = ros::WallTime::now();
 		std::cout << "The human_" << human_id  << " start time is: " << static_cast<double>((human_start_time - this->start_time_).toSec()) << std::endl;
+		std::cout << "The human start position is: " << msg->position.x << " " << msg->position.y << std::endl;
 		Eigen::Vector2d human_start_position(msg->position.x, msg->position.y);
 		this->human_map_tmp_[human_id] = std::make_shared<Human>(human_start_position, human_id, static_cast<double>((human_start_time - this->start_time_).toSec()));
 		std::cout << "Human map tmp size is " << this->human_map_tmp_.size() << std::endl;
@@ -297,7 +298,7 @@ void MotionPlanner::obstacle_info_callback(const hdi_plan::obstacle_info::ConstP
 	double obstacle_size = static_cast<double>(msg->size);
 	Eigen::Vector3d obstacle_position(msg->position.x, msg->position.y, msg->position.z);
 	auto obstacle = std::make_shared<Obstacle>(obstacle_name, obstacle_type, obstacle_operation, obstacle_size, obstacle_position);
-	ros::Time obstacle_start_time = ros::Time::now();
+	ros::WallTime obstacle_start_time = ros::WallTime::now();
 	std::cout << "The obstacle start time is: " << static_cast<double>((obstacle_start_time - this->start_time_).toSec()) << std::endl;
 	this->obstacle_update_info_list.push_back(obstacle);
 }
@@ -336,8 +337,9 @@ void MotionPlanner::human_movement_callback(const hdi_plan::obstacle_info::Const
 bool MotionPlanner::solve() {
 	ros::Duration(0.1).sleep();
 
-	if (this->iteration_count >= 200 && (this->iteration_count % 50 == 0)) {
-		ROS_INFO("######TRY to update/find solution path");
+	if (this->iteration_count >= 400 && (this->iteration_count % 50 == 1)) {
+		ROS_INFO("######TRY to update/find solution path");   
+		std::cout << "######TRY iteration number is: " << this->iteration_count << std::endl;
 		//this->visualize_node_tree();
 		if (this->update_solution_path_tmp()) {
 			this->optimize_solution_path();
@@ -345,7 +347,7 @@ bool MotionPlanner::solve() {
 
     }
 
-	ros::Time solve_start_time = ros::Time::now();
+	ros::WallTime solve_start_time = ros::WallTime::now();
     this->iteration_count += 1;
 	std::cout << "The iteration number is: " << this->iteration_count << "The nodes number is: " << static_cast<double>(this->nearest_neighbors_tree_->size()) << " Minus is: " << this->iteration_count - static_cast<double>(this->nearest_neighbors_tree_->size()) << std::endl;
 
@@ -373,7 +375,7 @@ bool MotionPlanner::solve() {
 	this->rewire_neighbors_v1(random_node);
 	this->reduce_inconsistency_v1();
 
-	double solve_time = (ros::Time::now() - solve_start_time).toSec();
+	double solve_time = (ros::WallTime::now() - solve_start_time).toSec();
 	this->solve_time_path_file << solve_time << "\n";
 	
     return true;
@@ -459,7 +461,7 @@ bool MotionPlanner::check_if_node_inside_obstacle(const std::shared_ptr<Obstacle
 	double distance = hdi_plan_utils::get_distance(obstacle->get_position(), node->get_state());
 	//std::cout << "The distance to obstacle is: " << distance << std::endl;
 	if (distance - this->quadrotor_radius_< obstacle->get_size()) {
-		Eigen::Vector3d node_state = node->get_state();
+		//Eigen::Vector3d node_state = node->get_state();
 		//std::cout << "Random node the node state is: " << node_state(0) << " " << node_state(1) << " " << node_state(2) << std::endl;
 		return true;
 	}
@@ -482,7 +484,7 @@ bool MotionPlanner::check_if_node_inside_all_obstacles(const std::shared_ptr<RRT
 	if (consider_human && this->exist_human_) {
 		for (auto human : this->human_map_) {
 			if (human.second->check_if_node_inside_human(node)) {
-				Eigen::Vector3d node_state = node->get_state();
+				//Eigen::Vector3d node_state = node->get_state();
 				//std::cout << "Check if node inside human: the node state is: " << node_state(0) << " " << node_state(1) << " " << node_state(2) << std::endl;
 				return true;
 			}
@@ -559,7 +561,6 @@ void MotionPlanner::add_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
 	std::cout << "When adding obstacle, the total nodes list number is: " << this->node_list_.size() << std::endl;
 	std::cout << "Obstacle position is: " << obstacle->get_position().x() << " "<< obstacle->get_position().y() << " " << obstacle->get_position().z() << std::endl;
 	std::cout << "Obstacle size is: " << obstacle->get_size() << std::endl;
-	int count = 0;
 	for (auto node : this->node_list_) {
 		if (!check_if_node_inside_obstacle_for_adding_ob(obstacle, node)) continue;
 		for (auto child_node : node->children) {
@@ -717,7 +718,7 @@ bool MotionPlanner::update_solution_path_tmp() {
 	}
 	this->solution_path.clear();
 	this->solution_path = this->solution_path_tmp;
-	for (int i = 0; i < this->solution_path.size(); i++) {
+	for (int i = 0; i < static_cast<int>(this->solution_path.size()); i++) {
 		Eigen::Vector3d ori_point = this->solution_path.at(i);
 		ROS_INFO("Solution trajectory is: x=%.2f, y=%.2f, z=%.2f", ori_point(0), ori_point(1), ori_point(2));
 	}
@@ -726,7 +727,7 @@ bool MotionPlanner::update_solution_path_tmp() {
 
 void MotionPlanner::optimize_solution_path() {
 	std::cout << "Now the solution path is found, the optimize part begins. The iteration number is: " << this->iteration_count << "The nodes number is: " << static_cast<double>(this->nearest_neighbors_tree_->size()) << std::endl;
-	ros::Time chomp_start_time = ros::Time::now();
+	ros::WallTime chomp_start_time = ros::WallTime::now();
 	ROS_INFO("Found the solution path, start to optimize");
 	//std::cout << "The solution path contains: " << this->solution_path.size() << " points" << std::endl;
 	//std::cout << "The obstacle number is " << this->obstacle_map.size() << std::endl;
@@ -740,11 +741,18 @@ void MotionPlanner::optimize_solution_path() {
 	this->chomp_path_file_num_ += 1;
 	std::vector<Eigen::Vector3d> optimized_trajectory = chomp->get_optimized_trajectory();
 
-	double chomp_process_time = (ros::Time::now() - chomp_start_time).toSec();
+	/*
+	for (int i = 0; i < static_cast<int>(optimized_trajectory.size()); i++) {
+		Eigen::Vector3d point = optimized_trajectory.at(i);
+		std::cout << "##Optimized path is: " << point(0) << " " << point(1) << " " << point(2) << std::endl;
+	}*/
+
+
+	double chomp_process_time = (ros::WallTime::now() - chomp_start_time).toSec();
 	std::cout << "The optimization time is: " << chomp_process_time << std::endl;
 
 	hdi_plan::point_array trajectory_msg;
-	int trajectory_size = optimized_trajectory.size();
+	int trajectory_size = static_cast<int>(optimized_trajectory.size());
 	geometry_msgs::Point trajectory_point;
 	std::string file_name = "data_" + std::to_string(this->path_file_num_) + ".txt";
 	std::ofstream data_file (file_name);
@@ -1152,8 +1160,10 @@ void MotionPlanner::saturate(std::shared_ptr<RRTNode> random_node, const std::sh
 // inserting a new node
 bool MotionPlanner::extend(std::shared_ptr<RRTNode> random_node) {
     //ROS_INFO("In extend now");
-    if (!this->node_in_free_space_check(random_node)) {
-        //ROS_INFO("Exit extend because 1st node space check");
+
+	random_node->set_time(this->generate_random_time(random_node->get_state()));
+
+    if (this->check_if_node_inside_all_obstacles(random_node, true)) {
         return false;
     }
     // v is random_node, u is neighbor
@@ -1164,7 +1174,6 @@ bool MotionPlanner::extend(std::shared_ptr<RRTNode> random_node) {
         return false;
     }
 
-    random_node->set_time(this->generate_random_time(random_node->get_state()));
 	this->add_node_to_nearest_neighbors_tree(random_node);
     random_node->parent->children.push_back(random_node);
 

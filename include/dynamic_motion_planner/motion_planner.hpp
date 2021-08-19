@@ -225,7 +225,7 @@ private:
 	double total_plan_time_{30};
 	double generate_random_time(const Eigen::Vector3d& state);
 	double quadrotor_speed_{1};
-	ros::Time start_time_;
+	ros::WallTime start_time_;
 
     // path write to file name
     int path_file_num_{0};
