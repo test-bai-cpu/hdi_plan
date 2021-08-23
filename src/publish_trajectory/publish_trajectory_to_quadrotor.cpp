@@ -71,6 +71,7 @@ void PublishTrajectory::trajectory_callback(const hdi_plan::point_array::ConstPt
 
 	geometry_msgs::PoseStamped go_to_pose_msg;
 	bool find_current_position = false;
+	std::vector<double> distance_list;
 	for (int i = 0; i < trajectory_size; i++) {
 		//if ((i%2 != 1) && (i != trajectory_size-1)) continue;
 		
@@ -79,18 +80,39 @@ void PublishTrajectory::trajectory_callback(const hdi_plan::point_array::ConstPt
 			break;
 		}
 
-		if (hdi_plan_utils::get_distance(quadrotor_state_, this->goal_state_) < 0.5) {
+		if (hdi_plan_utils::get_distance(quadrotor_state_, this->goal_state_) < 0.2) {
 			ROS_INFO("Already reach the goal area, in publish trajectory node. Stop publishing the trajectory.");
 			i = trajectory_size-1;
 		}
 		
 		/*
+		if (!find_current_position && i > trajectory_size/2 && trajectory_size > 5) {
+			find_current_position = true;
+			ROS_INFO("test2");
+			i = 0;
+		}*/
+
+		if (!find_current_position && i > trajectory_size - 2) {
+			int min_index = std::min_element(distance_list.begin(), distance_list.end()) - distance_list.begin();
+			find_current_position = true;
+			i = min_index + 2;
+			if (i > trajectory_size - 1) i = trajectory_size - 1;
+		}
+		
 		if (!find_current_position) {
 			Eigen::Vector3d traj_point(msg->points[i].x, msg->points[i].y, msg->points[i].z);
 			double distance = hdi_plan_utils::get_distance(traj_point, this->quadrotor_state_);
-			if (distance < 1.0) find_current_position = true;
+			distance_list.push_back(distance);
+			if (distance < 0.3) {
+				ROS_INFO("distance smaller than 0.3");
+				find_current_position = true;
+			} else {
+				ROS_INFO("larger than 0.3");
+			}
+			
+			std::cout << "traj point: " <<msg->points[i].x << " " << msg->points[i].y << " " << msg->points[i].z << " " << " quadrotor: " << this->quadrotor_state_.x() << " " << this->quadrotor_state_.y() << " " << this->quadrotor_state_.z() << " distance: " << distance << std::endl;
 			continue;
-		}*/
+		}
 
 		go_to_pose_msg.pose.position.x = msg->points[i].x;
 		go_to_pose_msg.pose.position.y = msg->points[i].y;

@@ -12,7 +12,7 @@ namespace hdi_plan {
 
 class Human {
 public:
-	Human(Eigen::Vector2d start_position, int human_id, double start_time);
+	Human(Eigen::Vector2d start_position, int human_id, double start_time, double planning_horizon_time);
 	~Human();
 
 	Eigen::Vector2d predict_path(double node_time);

@@ -54,8 +54,6 @@ private:
 	bool filter_mode_{false};
 	double collision_threshold_{0.07};
 
-	// export data
-	int chomp_path_file_num_{0};
 
 	// joint
 	int num_joints_{3};
@@ -140,7 +138,8 @@ private:
 	double joint_update_limit_{0.1};
 	double quadrotor_radius_{0.5};
 	bool use_stochastic_descent_{false};
-
+	// export data
+	int chomp_path_file_num_{0};
 
 };
 

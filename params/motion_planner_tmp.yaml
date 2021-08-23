@@ -1,6 +1,6 @@
 start_position: [1,1,2]
 goal_position: [20,20,2]
-total_planning_time: 30.0
+total_planning_time: 27.0
 
 max_distance: 1
 r_rrt: 10
@@ -16,20 +16,22 @@ planning_time_limit: 60
 max_iterations: 50
 max_iterations_after_collision_free: 15
 
-learning_rate: 0.1
+learning_rate: 0.4
 
-obstacle_cost_weight: 500.0
+obstacle_cost_weight: 5.0
 
-dynamic_obstacle_cost_weight: 0.1
+dynamic_obstacle_cost_weight: 5
 dynamic_collision_factor: 0.1
 
-smoothness_cost_weight: 0.2
+smoothness_cost_weight: 1.0
 smoothness_cost_velocity: 0.0
 smoothness_cost_acceleration: 1.0
 smoothness_cost_jerk: 0.0
 
 ridge_factor: 0.0
 min_clearence: 1.0
-joint_update_limit: 500.0
+joint_update_limit: 10.0
 
 discretization: 0.5
+
+with_chomp: True

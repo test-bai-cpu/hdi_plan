@@ -64,8 +64,10 @@ private:
     int iteration_count{0};
     bool if_find_solution_{false};
     std::ofstream solve_time_path_file;
+    std::ofstream optimize_time_path_file;
 	std::ofstream drone_actual_path_file;
 	void visualize_node_tree();
+	bool with_chomp_{true};
 
 	double get_distance_check_ob(const std::shared_ptr<RRTNode>& node1, const std::shared_ptr<RRTNode>& node2);
 
@@ -184,7 +186,7 @@ private:
 
     bool update_solution_path();
 	bool update_solution_path_tmp();
-    void publish_solution_path();
+    void publish_without_chomp();
     void optimize_solution_path();
 
     // obstacle related
@@ -250,6 +252,9 @@ private:
 	double ridge_factor_;
 	double min_clearence_;
 	double joint_update_limit_;
+
+    // dynamic obstacle
+    double planning_horizon_time_;
 };
 
 

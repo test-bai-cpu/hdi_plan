@@ -344,7 +344,7 @@ double Chomp::get_dynamic_potential(const Eigen::Vector3d& point, int index) {
 
 	//return potential;
 	
-	if (static_cast<double>(index) < static_cast<double>(this->num_vars_all_) * 0.4) {
+	if (static_cast<double>(index) < static_cast<double>(this->num_vars_all_) * 0.3) {
 		return potential * exp(-this->dynamic_collision_factor_ * point_time);
 	} else {
 		return potential;
@@ -375,7 +375,7 @@ double Chomp::get_dynamic_potential_for_gradient(double x, double y, double z, i
 
 	//return potential;
 	
-	if (static_cast<double>(index) < static_cast<double>(this->num_vars_all_) * 0.4) {
+	if (static_cast<double>(index) < static_cast<double>(this->num_vars_all_) * 0.3) {
 		return potential * exp(-this->dynamic_collision_factor_ * point_time);
 	} else {
 		return potential;
@@ -473,7 +473,7 @@ void Chomp::calculate_collision_increments() {
 		curvature_vector = (orthogonal_projector * this->collision_point_acc_[i]) / vel_mag_sq;
 		cartesian_gradient = vel_mag * (orthogonal_projector * potential_gradient - potential * curvature_vector);
 
-		this->collision_increments_.row(i - this->free_vars_start_).transpose() -=
+		this->collision_increments_.row(i - this->free_vars_start_).transpose() +=
 				Eigen::MatrixXd::Identity(3, 3) * cartesian_gradient;
 	}
 
@@ -520,7 +520,7 @@ void Chomp::calculate_dynamic_collision_increments() {
 		curvature_vector = (orthogonal_projector * this->collision_point_acc_[i]) / vel_mag_sq;
 		cartesian_gradient = vel_mag * (orthogonal_projector * potential_gradient - potential * curvature_vector);
 
-		this->dynamic_collision_increments_.row(i - this->free_vars_start_).transpose() -=
+		this->dynamic_collision_increments_.row(i - this->free_vars_start_).transpose() +=
 				Eigen::MatrixXd::Identity(3, 3) * cartesian_gradient;
 	}
 }

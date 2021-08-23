@@ -45,7 +45,8 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh, const ros::NodeHandle &p
 
 	std::string file_name = "solve_time.txt";
 	this->solve_time_path_file.open(file_name);
-
+	std::string op_file_name = "optimize_time.txt";
+	this->optimize_time_path_file.open(op_file_name);
 	std::string actual_path_file_name = "drone_actual_path.txt";
 	this->drone_actual_path_file.open(actual_path_file_name);
 }
@@ -79,6 +80,8 @@ bool MotionPlanner::load_params() {
 	this->pnh_.getParam("joint_update_limit", this->joint_update_limit_);
 	this->pnh_.getParam("discretization", this->discretization_);
 
+	this->pnh_.getParam("with_chomp", this->with_chomp_);
+	this->pnh_.getParam("planning_horizon_time", this->planning_horizon_time_);
 	return true;
 }
 
@@ -211,8 +214,8 @@ std::shared_ptr<RRTNode> MotionPlanner::generate_random_node() {
 double MotionPlanner::generate_random_time(const Eigen::Vector3d& state) {
 	bool choose_time_by_distance = (rand() % 100) < 90;
 
-	double min_time = this->total_plan_time_ - hdi_plan_utils::get_distance(state, this->goal_->get_state())/this->quadrotor_speed_;
-	double max_time = this->total_plan_time_;
+	double min_time = hdi_plan_utils::get_distance(state, this->start_->get_state())/this->quadrotor_speed_;
+	double max_time = hdi_plan_utils::get_distance(this->goal_->get_state(), this->start_->get_state())/this->quadrotor_speed_;
 
 	double random_time;
 	
@@ -249,14 +252,17 @@ void MotionPlanner::quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr 
     Eigen::Vector3d quadrotor_state(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
     this->quadrotor_state_ = quadrotor_state;
 	this->quadrotor_->set_state_by_vector(quadrotor_state);
-    if (hdi_plan_utils::get_distance(quadrotor_state, this->goal_->get_state()) > 1) {
+    if (hdi_plan_utils::get_distance(quadrotor_state, this->goal_->get_state()) > 0.5) {
 		this->drone_actual_path_file << quadrotor_state(0) << " " << quadrotor_state(1) << " " << quadrotor_state(2) << "\n";
         this->solve();
     } else {
-		std::cout << "The iteration number is: " << this->iteration_count << "The nodes number is: " << static_cast<double>(this->nearest_neighbors_tree_->size()) << std::endl;
+		//std::cout << "The iteration number is: " << this->iteration_count << "The nodes number is: " << static_cast<double>(this->nearest_neighbors_tree_->size()) << std::endl;
         ROS_INFO("Already reach the goal. Will exit.");
 		if (this->solve_time_path_file.is_open()) {
 			this->solve_time_path_file.close();
+		}
+		if (this->optimize_time_path_file.is_open()) {
+			this->optimize_time_path_file.close();
 		}
 		if (this->drone_actual_path_file.is_open()) {
 			this->drone_actual_path_file.close();
@@ -286,7 +292,7 @@ void MotionPlanner::obstacle_info_callback(const hdi_plan::obstacle_info::ConstP
 		std::cout << "The human_" << human_id  << " start time is: " << static_cast<double>((human_start_time - this->start_time_).toSec()) << std::endl;
 		std::cout << "The human start position is: " << msg->position.x << " " << msg->position.y << std::endl;
 		Eigen::Vector2d human_start_position(msg->position.x, msg->position.y);
-		this->human_map_tmp_[human_id] = std::make_shared<Human>(human_start_position, human_id, static_cast<double>((human_start_time - this->start_time_).toSec()));
+		this->human_map_tmp_[human_id] = std::make_shared<Human>(human_start_position, human_id, static_cast<double>((human_start_time - this->start_time_).toSec()), this->planning_horizon_time_);
 		std::cout << "Human map tmp size is " << this->human_map_tmp_.size() << std::endl;
 		std::cout << "Human map size is " << this->human_map_.size() << std::endl;
 		return;
@@ -342,14 +348,21 @@ bool MotionPlanner::solve() {
 		std::cout << "######TRY iteration number is: " << this->iteration_count << std::endl;
 		//this->visualize_node_tree();
 		if (this->update_solution_path_tmp()) {
-			this->optimize_solution_path();
+			if (this->with_chomp_) {
+				ROS_INFO("Publish with chomp");
+				this->optimize_solution_path();
+
+			} else {
+				ROS_INFO("Publish without chomp");
+				this->publish_without_chomp();
+			}
 		}
 
     }
 
 	ros::WallTime solve_start_time = ros::WallTime::now();
     this->iteration_count += 1;
-	std::cout << "The iteration number is: " << this->iteration_count << "The nodes number is: " << static_cast<double>(this->nearest_neighbors_tree_->size()) << " Minus is: " << this->iteration_count - static_cast<double>(this->nearest_neighbors_tree_->size()) << std::endl;
+	//std::cout << "The iteration number is: " << this->iteration_count << "The nodes number is: " << static_cast<double>(this->nearest_neighbors_tree_->size()) << " Minus is: " << this->iteration_count - static_cast<double>(this->nearest_neighbors_tree_->size()) << std::endl;
 
     this->calculateRRG();
 
@@ -460,7 +473,7 @@ void MotionPlanner::remove_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
 bool MotionPlanner::check_if_node_inside_obstacle(const std::shared_ptr<Obstacle>& obstacle, const std::shared_ptr<RRTNode>& node) {
 	double distance = hdi_plan_utils::get_distance(obstacle->get_position(), node->get_state());
 	//std::cout << "The distance to obstacle is: " << distance << std::endl;
-	if (distance - this->quadrotor_radius_< obstacle->get_size()) {
+	if (distance - this->quadrotor_radius_ - this->min_clearence_ < obstacle->get_size()) {
 		//Eigen::Vector3d node_state = node->get_state();
 		//std::cout << "Random node the node state is: " << node_state(0) << " " << node_state(1) << " " << node_state(2) << std::endl;
 		return true;
@@ -471,7 +484,8 @@ bool MotionPlanner::check_if_node_inside_obstacle(const std::shared_ptr<Obstacle
 bool MotionPlanner::check_if_node_inside_obstacle_for_adding_ob(const std::shared_ptr<Obstacle>& obstacle, const std::shared_ptr<RRTNode>& node) {
 	double distance = hdi_plan_utils::get_distance(obstacle->get_position(), node->get_state());
 	//std::cout << "The distance to obstacle is: " << distance << " . And the minus is: " << distance - this->quadrotor_radius_ - obstacle->get_size() << std::endl;
-	if (distance - this->quadrotor_radius_< obstacle->get_size()) {
+	//std::cout << "obstacle size: " <<  obstacle->get_size() << std::endl;
+	if (distance - this->quadrotor_radius_ - this->min_clearence_ < obstacle->get_size()) {
 		Eigen::Vector3d node_state = node->get_state();
 		std::cout << "remove node the node state is: " << node_state(0) << " " << node_state(1) << " " << node_state(2) << std::endl;
 		return true;
@@ -546,28 +560,45 @@ void MotionPlanner::add_human_as_obstacle(const Eigen::Vector2d& human_position)
 }*/
 
 void MotionPlanner::add_human_as_obstacle(int human_id) {
+	std_msgs::Bool get_new_path_msg;
+	get_new_path_msg.data = true;
+	this->pub_get_new_path_.publish(get_new_path_msg);
+	double inf = std::numeric_limits<double>::infinity();
 	for (auto node : this->node_list_) {
 		if (!this->human_map_[human_id]->check_if_node_inside_human(node)) continue;
-		std::cout << "The colliding with human node position is: " << node->get_state().x() << " " << node->get_state().y() << " " << node->get_state().z() << std::endl;
+		std::cout << "The colliding with human node position is: " << node->get_state().x() << " " << node->get_state().y() << " " << node->get_state().z() << " time:" << node->get_time() << std::endl;
 		for (auto child_node : node->children) {
 			//todo: check If only child to parent node, or need to set edge of parent to child also to inf, and also recalculate in remove obstacle step
 			child_node->update_neighbor_edge_list(node->get_unique_id(), std::numeric_limits<double>::infinity());
+			child_node->set_g_cost(inf, true);
+			child_node->set_lmc(inf, true);
+			child_node->parent = nullptr;
 			this->verify_orphan(child_node);
 		}
+		node->children.clear();
 	}
 }
 
 void MotionPlanner::add_obstacle(const std::shared_ptr<Obstacle>& obstacle) {
+	std_msgs::Bool get_new_path_msg;
+	get_new_path_msg.data = true;
+	this->pub_get_new_path_.publish(get_new_path_msg);
+
 	std::cout << "When adding obstacle, the total nodes list number is: " << this->node_list_.size() << std::endl;
 	std::cout << "Obstacle position is: " << obstacle->get_position().x() << " "<< obstacle->get_position().y() << " " << obstacle->get_position().z() << std::endl;
 	std::cout << "Obstacle size is: " << obstacle->get_size() << std::endl;
+	double inf = std::numeric_limits<double>::infinity();
 	for (auto node : this->node_list_) {
 		if (!check_if_node_inside_obstacle_for_adding_ob(obstacle, node)) continue;
 		for (auto child_node : node->children) {
 			//todo: check If only child to parent node, or need to set edge of parent to child also to inf, and also recalculate in remove obstacle step
 			child_node->update_neighbor_edge_list(node->get_unique_id(), std::numeric_limits<double>::infinity());
+			child_node->set_g_cost(inf, true);
+			child_node->set_lmc(inf, true);
+			child_node->parent = nullptr;
 			this->verify_orphan(child_node);
 		}
+		node->children.clear();
 		// publish the position of the blocked node to visualize
 		/*
 		geometry_msgs::Point node_msg;
@@ -599,7 +630,9 @@ void MotionPlanner::propogate_descendants() {
 		std::vector<std::shared_ptr<RRTNode>> n_out;
 		n_out.insert(n_out.end(), orphan_node_2->n0_out.begin(), orphan_node_2->n0_out.end());
 		n_out.insert(n_out.end(), orphan_node_2->nr_out.begin(), orphan_node_2->nr_out.end());
-		n_out.push_back(orphan_node_2->parent);
+		if (orphan_node_2->parent != nullptr) {
+			n_out.push_back(orphan_node_2->parent);
+		}
 
 		for (auto neighbor : n_out) {
 			if (this->check_if_node_in_orphan_list(neighbor)) continue;
@@ -617,10 +650,10 @@ void MotionPlanner::propogate_descendants() {
 			orphan_node_3->parent->children.erase(std::remove(orphan_node_3->parent->children.begin(), orphan_node_3->parent->children.end(), orphan_node_3), orphan_node_3->parent->children.end());
 		}
         orphan_node_3->parent = nullptr;
-		std::cout << "The orphan node position: " << orphan_node_3->get_state().x() << " " << orphan_node_3->get_state().y() << " " << orphan_node_3->get_state().z() << " . g_cost is: " << orphan_node_3->get_g_cost() << " . lmc is: " << orphan_node_3->get_lmc() << std::endl;
+		//std::cout << "The orphan node position: " << orphan_node_3->get_state().x() << " " << orphan_node_3->get_state().y() << " " << orphan_node_3->get_state().z() << " . g_cost is: " << orphan_node_3->get_g_cost() << " . lmc is: " << orphan_node_3->get_lmc() << std::endl;
 		orphan_count += 1;
     }
-	std::cout << "In propogateDescendants, the orphan count is: " << orphan_count << std::endl;
+	//std::cout << "In propogateDescendants, the orphan count is: " << orphan_count << std::endl;
 	this->orphan_node_list.clear();
 }
 
@@ -687,7 +720,7 @@ bool MotionPlanner::update_solution_path_tmp() {
 
 	for (auto it = near_neighbors.begin(); it != near_neighbors.end(); ++it) {
 		std::shared_ptr<RRTNode> free_neighbor = *it;
-		std::cout << "### Check neighbor pos is: " << free_neighbor->get_state().x() << " " << free_neighbor->get_state().y() << " " << free_neighbor->get_state().z() << std::endl;
+		std::cout << "### Check neighbor pos is: " << free_neighbor->get_state().x() << " " << free_neighbor->get_state().y() << " " << free_neighbor->get_state().z() << " time is: " << free_neighbor->get_time() << std::endl;
 		//if (!this->node_in_free_space_check(free_neighbor)) continue;
 		cost_to_nearest_node = hdi_plan_utils::get_distance(free_neighbor->get_state(), this->quadrotor_->get_state());
 		if (cost_to_nearest_node > this->max_distance_ + 1) continue;
@@ -706,7 +739,7 @@ bool MotionPlanner::update_solution_path_tmp() {
 				break;
 			}
 			intermediate_node = intermediate_node->parent;
-			std::cout << "### this neighbot's parent pos is: " << intermediate_node->get_state().x() << " " << intermediate_node->get_state().y() << " " << intermediate_node->get_state().z() << std::endl;
+			std::cout << "### this neighbot's parent pos is: " << intermediate_node->get_state().x() << " " << intermediate_node->get_state().y() << " " << intermediate_node->get_state().z() << " time is: " << intermediate_node->get_time() << std::endl;
 		}
 		if (if_find_solution) break;
 	}
@@ -723,6 +756,43 @@ bool MotionPlanner::update_solution_path_tmp() {
 		ROS_INFO("Solution trajectory is: x=%.2f, y=%.2f, z=%.2f", ori_point(0), ori_point(1), ori_point(2));
 	}
     return if_find_solution;
+}
+
+void MotionPlanner::publish_without_chomp() {
+	std::cout << "Now the solution path is found, will publish the path without CHOMP planner. The iteration number is: " << this->iteration_count << "The nodes number is: " << static_cast<double>(this->nearest_neighbors_tree_->size()) << std::endl;
+	hdi_plan::point_array trajectory_msg;
+	int trajectory_size = static_cast<int>(this->solution_path.size());
+	geometry_msgs::Point trajectory_point;
+	for (int i = 0; i < trajectory_size; i++) {
+		Eigen::Vector3d point = this->solution_path.at(i);
+		trajectory_point.x = point(0);
+		trajectory_point.y = point(1);
+		trajectory_point.z = point(2);
+		trajectory_msg.points.push_back(trajectory_point);
+		//ROS_INFO("NO chomp: publish trajectory is: x=%.2f, y=%.2f, z=%.2f", point(0), point(1), point(2));
+	}
+
+	int ori_trajectory_size = this->solution_path.size();
+	std::string ori_file_name = "ori_data_" + std::to_string(this->path_file_num_) + ".txt";
+	std::ofstream ori_data_file (ori_file_name);
+	for (int i = 0; i < ori_trajectory_size; i++) {
+		Eigen::Vector3d ori_point = this->solution_path.at(i);
+		ori_data_file << ori_point(0) << " " << ori_point(1) << " " << ori_point(2) << "\n";
+		//ROS_INFO("Solution trajectory is: x=%.2f, y=%.2f, z=%.2f", ori_point(0), ori_point(1), ori_point(2));
+	}
+	if (ori_data_file.is_open()) {
+		ori_data_file.close();
+	}
+
+	this->path_file_num_ += 1;
+
+	ROS_INFO("No: chomp. Publish the trajectory from motion planner");
+
+	std_msgs::Bool get_new_path_msg;
+	get_new_path_msg.data = true;
+	this->pub_get_new_path_.publish(get_new_path_msg);
+	ros::Duration(1.0).sleep();
+	this->pub_optimized_path_.publish(trajectory_msg);
 }
 
 void MotionPlanner::optimize_solution_path() {
@@ -750,6 +820,7 @@ void MotionPlanner::optimize_solution_path() {
 
 	double chomp_process_time = (ros::WallTime::now() - chomp_start_time).toSec();
 	std::cout << "The optimization time is: " << chomp_process_time << std::endl;
+	this->optimize_time_path_file << chomp_process_time << "\n";
 
 	hdi_plan::point_array trajectory_msg;
 	int trajectory_size = static_cast<int>(optimized_trajectory.size());
@@ -886,14 +957,14 @@ void MotionPlanner::reduce_inconsistency_v1() {
         this->node_queue.pop();
 		
 		if (this->check_if_node_inside_all_obstacles(min_node, true)) {
-			std::cout << "V1: Skip one node Now : " << min_node->get_state().x() << " " << min_node->get_state().y() << " " << min_node->get_state().z() << std::endl;
+			//std::cout << "V1: Skip one node Now : " << min_node->get_state().x() << " " << min_node->get_state().y() << " " << min_node->get_state().z() << std::endl;
 			continue;
 		}
 		this->rewire_neighbors_v2(min_node);
 		min_node->set_g_cost(min_node->get_lmc());
     }
 
-	std::cout << "Node queue size is: " << this->node_queue.size() << std::endl;
+	//std::cout << "Node queue size is: " << this->node_queue.size() << std::endl;
 }
 
 void MotionPlanner::reduce_inconsistency_v2() {
@@ -905,7 +976,7 @@ void MotionPlanner::reduce_inconsistency_v2() {
 		//this->update_lmc_v1(min_node);
 		
 		if (this->check_if_node_inside_all_obstacles(min_node, true)) {
-			std::cout << "V2: Skip one node Now : " << min_node->get_state().x() << " " << min_node->get_state().y() << " " << min_node->get_state().z() << std::endl;
+			//std::cout << "V2: Skip one node Now : " << min_node->get_state().x() << " " << min_node->get_state().y() << " " << min_node->get_state().z() << std::endl;
 			continue;
 		}
 		this->update_lmc_v2(min_node);
@@ -913,7 +984,7 @@ void MotionPlanner::reduce_inconsistency_v2() {
 		min_node->set_g_cost(min_node->get_lmc());
     }
 
-	std::cout << "Node queue size is: " << this->node_queue.size() << std::endl;
+	//std::cout << "Node queue size is: " << this->node_queue.size() << std::endl;
 }
 
 void MotionPlanner::reduce_inconsistency_for_env_update() {
@@ -944,7 +1015,7 @@ void MotionPlanner::update_lmc(std::shared_ptr<RRTNode> node) {
     std::vector<std::shared_ptr<RRTNode>> n_out;
     n_out.insert(n_out.end(), node->n0_out.begin(), node->n0_out.end());
     n_out.insert(n_out.end(), node->nr_out.begin(), node->nr_out.end());
-	std::cout << "Check n_out size: " << n_out.size() << std::endl;
+	//std::cout << "Check n_out size: " << n_out.size() << std::endl;
 
     for (auto it = n_out.begin(); it != n_out.end(); ++it) {
         std::shared_ptr<RRTNode> neighbor = *it;
@@ -1115,7 +1186,7 @@ void MotionPlanner::calculateRRG() {
 		this->rrg_r_ = this->max_distance_ + 0.5;
     }
     //std::cout << "Tree size is: " << num_of_nodes_in_tree << std::endl;
-	std::cout << "!!!!!!!!!!!!!!!The rrg_r_ is " << this->rrg_r_ << std::endl;
+	//std::cout << "!!!!!!!!!!!!!!!The rrg_r_ is " << this->rrg_r_ << std::endl;
 }
 
 void MotionPlanner::cull_neighbors(std::shared_ptr<RRTNode> random_node) {

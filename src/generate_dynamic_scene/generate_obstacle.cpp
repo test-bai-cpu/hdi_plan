@@ -9,11 +9,11 @@ GenerateObstacle::GenerateObstacle(const ros::NodeHandle &nh, const ros::NodeHan
 	this->update_human_obstacle_pub_ = nh_.advertise<hdi_plan::obstacle_info>("hdi_plan/obstacle_info_topic", 1);
 
 	// wait until human movement start
-	//ros::Duration(22.0 + 40.0).sleep();
+	//ros::Duration(24.0 + 40.0).sleep();
 	//this->publish_obstacle();
 	//ros::Duration(5.0).sleep();
 	//this->remove_obstacle();
-	ros::Duration(24.5 + 40.0).sleep();
+	ros::Duration(24.0 + 40.0).sleep();
 	this->publish_human_movement_1();
 }
 
@@ -69,8 +69,8 @@ void GenerateObstacle::publish_obstacle2() {
 }
 
 void GenerateObstacle::publish_human_movement_1() {
-	Eigen::Vector2d start_point(10.0, -3.0);
-	Eigen::Vector2d goal_point(10.0, 20.0);
+	Eigen::Vector2d start_point(10.0, 23.0);
+	Eigen::Vector2d goal_point(10.0, 0.0);
 	Eigen::Vector2d current_point(start_point(0), start_point(1));
 	double distance = hdi_plan_utils::get_distance_2d(start_point, goal_point);
 	double velocity = 1;
@@ -84,6 +84,7 @@ void GenerateObstacle::publish_human_movement_1() {
 		current_point(0) = (goal_point(0) - start_point(0)) * (velocity * count * period) / distance + start_point(0);
 		current_point(1) = (goal_point(1) - start_point(1)) * (velocity * count * period) / distance + start_point(1);
 
+		std::cout << "Sending pos: " << current_point(0) << " " << current_point(1) << std::endl;
 		update_human_obstacle_pub_.publish(get_obstacle_message(true, human_id, current_point(0), current_point(1)));
 		if (count > 0) human_movement_pub_.publish(get_obstacle_message(true, human_id, current_point(0), current_point(1)));
 
@@ -259,34 +260,58 @@ bool GenerateObstacle::load_params() {
 }
 
 void GenerateObstacle::publish_trajectory() {
-
 	std::vector<Eigen::Vector3d> solution_path;
-	solution_path.resize(12);
-	Eigen::Vector3d point_1(0.956614, 1.28775, 1.85346);
+	solution_path.resize(11);
+	Eigen::Vector3d point_1(2.45292, 3.51743, 1.15095);
 	solution_path[0] = point_1;
-	Eigen::Vector3d point_2(2.113, 2.84397, 1.64631);
+	Eigen::Vector3d point_2(3.67979, 5.12402, 1.01063);
 	solution_path[1] = point_2;
-	Eigen::Vector3d point_3(4.68187, 4.58535, 1.7791);
+	Eigen::Vector3d point_3(5.96799, 7.49909, 1.99399);
 	solution_path[2] = point_3;
-	Eigen::Vector3d point_4(5.99614, 5.5577, 1.55252);
+	Eigen::Vector3d point_4(6.16125, 9.16252, 2.19597);
 	solution_path[3] = point_4;
-	Eigen::Vector3d point_5(7.84038, 6.813, 1.38858);
+	Eigen::Vector3d point_5(6.45006, 12.4731, 1.64777);
 	solution_path[4] = point_5;
-	Eigen::Vector3d point_6(10.1752, 8.6619, 1.82541);
+	Eigen::Vector3d point_6(9.49938, 13.6013, 1.80064);
 	solution_path[5] = point_6;
-	Eigen::Vector3d point_7(11.93, 10.3711, 1.74491);
+	Eigen::Vector3d point_7(12.3138, 14.9923, 2.36284);
 	solution_path[6] = point_7;
-	Eigen::Vector3d point_8(13.9606, 12.1169, 1.28471);
+	Eigen::Vector3d point_8(14.7372, 17.1306, 1.78767);
 	solution_path[7] = point_8;
-	Eigen::Vector3d point_9(14.112, 13.3455, 1.52649);
+	Eigen::Vector3d point_9(15.3523, 17.9035, 1.94358);
 	solution_path[8] = point_9;
-	Eigen::Vector3d point_10(16.3847, 15.4567, 1.75421);
+	Eigen::Vector3d point_10(17.815, 18.8867, 2.0752);
 	solution_path[9] = point_10;
-	Eigen::Vector3d point_11(18.6264, 17.2791, 1.21986);
+	Eigen::Vector3d point_11(20, 20, 2);
 	solution_path[10] = point_11;
-	Eigen::Vector3d point_12(20, 20, 2);
-	solution_path[11] = point_12;
 
+	
+	std::vector<Eigen::Vector3d> solution_path;
+	solution_path.resize(11);
+	Eigen::Vector3d point_1(2.84782, 3.53338, 1.25199);
+	solution_path[0] = point_1;
+	Eigen::Vector3d point_2(3.548, 4.2471, 1.23326);
+	solution_path[1] = point_2;
+	Eigen::Vector3d point_3(5.7596, 6.63072, 1.24123);
+	solution_path[2] = point_3;
+	Eigen::Vector3d point_4(9.17822, 6.41438, 0.634579);
+	solution_path[3] = point_4;
+	Eigen::Vector3d point_5(10.4976, 6.69923, 0.639617);
+	solution_path[4] = point_5;
+	Eigen::Vector3d point_6(13.3017, 8.46523, 1.43444);
+	solution_path[5] = point_6;
+	Eigen::Vector3d point_7(14.3369, 10.4171, 0.835684);
+	solution_path[6] = point_7;
+	Eigen::Vector3d point_8(15.4546, 13.5029, 0.638429);
+	solution_path[7] = point_8;
+	Eigen::Vector3d point_9(17.4934, 15.2709, 1.26955);
+	solution_path[8] = point_9;
+	Eigen::Vector3d point_10(19.1406, 17.4181, 1.61743);
+	solution_path[9] = point_10;
+	Eigen::Vector3d point_11(20, 20, 2);
+	solution_path[10] = point_11;
+
+	
 	std::vector<Eigen::Vector3d> solution_path;
 	solution_path.resize(9);
 	Eigen::Vector3d point_1(4.55281, 4.11356, 1.49805);
@@ -310,7 +335,8 @@ void GenerateObstacle::publish_trajectory() {
 	Eigen::Vector3d point_10(17.9467, 18.4052, 1.66529);
 	solution_path[8] = point_10;
 	Eigen::Vector3d point_11(20, 20, 2);
-	solution_path[8] = point_11;
+	solution_path[9] = point_11;
+	
 
 	std::ofstream data_file2("original_trajectory.txt");
 	for (int i = 0; i < static_cast<int>(solution_path.size()); i++) {
@@ -349,6 +375,7 @@ void GenerateObstacle::publish_trajectory() {
 	std::ofstream data_file1("optimized_trajectory.txt");
 	for (int i = 0; i < static_cast<int>(optimized_trajectory.size()); i++) {
 		Eigen::Vector3d point = optimized_trajectory.at(i);
+		std::cout << point(0) << " " << point(1) << " " << point(2) << std::endl;
 		data_file1 << point(0) << " " << point(1) << " " << point(2) << "\n";
 	}
 	if (data_file1.is_open()) {
