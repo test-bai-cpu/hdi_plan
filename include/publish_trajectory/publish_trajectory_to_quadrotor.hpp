@@ -18,6 +18,7 @@
 #include <Eigen/Dense>
 #include <iostream>
 #include <fstream>
+#include <vector>
 
 #include "utils/utility_functions.hpp"
 #include <hdi_plan/point_array.h>

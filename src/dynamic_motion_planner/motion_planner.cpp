@@ -487,7 +487,7 @@ bool MotionPlanner::check_if_node_inside_obstacle_for_adding_ob(const std::share
 	//std::cout << "obstacle size: " <<  obstacle->get_size() << std::endl;
 	if (distance - this->quadrotor_radius_ - this->min_clearence_ < obstacle->get_size()) {
 		Eigen::Vector3d node_state = node->get_state();
-		std::cout << "remove node the node state is: " << node_state(0) << " " << node_state(1) << " " << node_state(2) << std::endl;
+		//std::cout << "remove node the node state is: " << node_state(0) << " " << node_state(1) << " " << node_state(2) << std::endl;
 		return true;
 	}
 	return false;
@@ -720,7 +720,7 @@ bool MotionPlanner::update_solution_path_tmp() {
 
 	for (auto it = near_neighbors.begin(); it != near_neighbors.end(); ++it) {
 		std::shared_ptr<RRTNode> free_neighbor = *it;
-		std::cout << "### Check neighbor pos is: " << free_neighbor->get_state().x() << " " << free_neighbor->get_state().y() << " " << free_neighbor->get_state().z() << " time is: " << free_neighbor->get_time() << std::endl;
+		//std::cout << "### Check neighbor pos is: " << free_neighbor->get_state().x() << " " << free_neighbor->get_state().y() << " " << free_neighbor->get_state().z() << " time is: " << free_neighbor->get_time() << std::endl;
 		//if (!this->node_in_free_space_check(free_neighbor)) continue;
 		cost_to_nearest_node = hdi_plan_utils::get_distance(free_neighbor->get_state(), this->quadrotor_->get_state());
 		if (cost_to_nearest_node > this->max_distance_ + 1) continue;
@@ -739,7 +739,7 @@ bool MotionPlanner::update_solution_path_tmp() {
 				break;
 			}
 			intermediate_node = intermediate_node->parent;
-			std::cout << "### this neighbot's parent pos is: " << intermediate_node->get_state().x() << " " << intermediate_node->get_state().y() << " " << intermediate_node->get_state().z() << " time is: " << intermediate_node->get_time() << std::endl;
+			//std::cout << "### this neighbot's parent pos is: " << intermediate_node->get_state().x() << " " << intermediate_node->get_state().y() << " " << intermediate_node->get_state().z() << " time is: " << intermediate_node->get_time() << std::endl;
 		}
 		if (if_find_solution) break;
 	}

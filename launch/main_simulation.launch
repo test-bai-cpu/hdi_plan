@@ -1,10 +1,42 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="debug" default="0" />
+    <arg name="quad_name" default="hummingbird"/>
+
+    <arg name="mav_name" default="$(arg quad_name)"/>
+    <arg name="model" value="$(find rotors_description)/urdf/mav_generic_odometry_sensor.gazebo"/>
+    <arg name="world_name" default="$(find rotors_gazebo)/worlds/basic.world"/>
+
+    <arg name="use_unity_editor" default="false" />
+    <arg name="paused" value="true"/>
+    <arg name="gui" value="true"/>
+    <arg name="use_mpc" default="false"/>
+    <arg name="use_ground_truth" default="true"/>
+    <arg name="enable_ground_truth" default="true"/>
+    <arg name="enable_command_feedthrough" default="false"/>
+    <arg name="custom_models" default=""/>
+
+    <arg name="enable_logging" default="false"/>
+    <arg name="log_file" default="$(arg mav_name)"/>
+
+    <arg name="x_init" default="0"/>
+    <arg name="y_init" default="0"/>
+
+    <arg name="debug" default="false"/>
+    <arg name="verbose" default="false"/>
+
+    <param name="use_sim_time" value="true"/>
+    <!-- RPG Flightmare Unity Render. -->
+    <node pkg="flightrender" type="RPG_Flightmare.x86_64" name="rpg_flightmare_render" unless="$(arg use_unity_editor)">
+    </node>
 
     <node name="generate_dynamic_scene_node" pkg="hdi_plan" type="generate_dynamic_scene_node" output="screen">
       <rosparam file="$(find hdi_plan)/params/motion_planner_tmp.yaml" />
       <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
+    </node>
+
+    <node name="start_quadrotor_node" pkg="hdi_plan" type="start_quadrotor_node" output="screen">
+        <rosparam file="$(find hdi_plan)/params/start_quadrotor.yaml" />
+        <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
     </node>
 
 </launch>

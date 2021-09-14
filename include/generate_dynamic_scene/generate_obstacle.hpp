@@ -50,10 +50,19 @@ private:
 	ros::NodeHandle nh_;
 	ros::NodeHandle pnh_;
 
+	ros::Subscriber trajectory_sub_;
+
 	ros::Publisher human_movement_pub_;
 	ros::Publisher update_human_obstacle_pub_;
 	ros::Publisher pub_optimized_path_;
 	ros::Publisher pub_get_new_path_;
+	ros::Publisher path_spot_pub_;
+
+	std::vector<hdi_plan::obstacle_info> path_spot_list_;
+	std::vector<double> goal_position_param_;
+
+	void publish_goal_position();
+	bool load_params();
 
     void publish_human_movement_1();
 	void publish_human_movement_2();
@@ -62,6 +71,8 @@ private:
 	void remove_obstacle();
     double get_distance(const Eigen::Vector2d &point1, const Eigen::Vector2d &point2);
     hdi_plan::obstacle_info get_obstacle_message(bool operation, int human_id, double position_x = 100.0, double position_y = 100.0);
+	void trajectory_callback(const hdi_plan::point_array::ConstPtr &msg);
+	void publish_path_spot(int stop_index);
     /*
 	void publish_trajectory();
 	bool load_params();

@@ -5,7 +5,11 @@
 #include <nav_msgs/Odometry.h>
 #include <visualization_msgs/MarkerArray.h>
 
+#include "generate_dynamic_scene/obstacle.hpp"
+#include "generate_dynamic_scene/human.hpp"
+#include <hdi_plan/obstacle_info.h>
 #include <hdi_plan/point_array.h>
+#include "utils/utility_functions.hpp"
 
 #include "path_visualization/visualization_markers.hpp"
 
@@ -26,6 +30,7 @@ private:
 	ros::Subscriber blocked_node_position_sub_;
 	ros::Publisher trajectory_vis_pub_;
 	ros::Publisher quadrotor_vis_pub_;
+	ros::Publisher path_spot_pub_;
 
 	int marker_id_{2};
 	int blocked_node_marker_id_{0};
@@ -37,5 +42,12 @@ private:
 	void quadrotor_state_callback(const nav_msgs::Odometry::ConstPtr &msg);
 	visualization_msgs::Marker visualizationMarker_to_msg(const VisualizationMarker &marker);
 	visualization_msgs::MarkerArray visualizationMarkers_to_msg(const VisualizationMarkers &markers);
+
+	bool load_params();
+	void trajectory_callback(const hdi_plan::point_array::ConstPtr &msg);
+	void publish_path_spot(int stop_index);
+
+	std::vector<hdi_plan::obstacle_info> path_spot_list_;
+	std::vector<double> goal_position_param_;
 };
 }

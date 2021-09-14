@@ -22,6 +22,8 @@ StartQuadrotor::StartQuadrotor(const ros::NodeHandle &nh, const ros::NodeHandle 
                                  &StartQuadrotor::pose_callback, this);
     this->obstacle_info_sub_ = this->nh_.subscribe("hdi_plan/obstacle_info_topic", 1,
 												   &StartQuadrotor::obstacle_callback, this);
+    this->path_spot_sub_ = this->nh_.subscribe("hdi_plan/path_spot_topic", 100,
+												   &StartQuadrotor::path_spot_callback, this);
     this->main_loop_timer_ = this->nh_.createTimer(ros::Rate(this->main_loop_freq_),
                                       &StartQuadrotor::main_loop_callback, this);
 	this->arm_bridge_pub_ = nh_.advertise<std_msgs::Bool>("bridge/arm", 1);
@@ -49,7 +51,45 @@ void StartQuadrotor::spawn_quadrotor() {
     quad_ptr_->setSize(quad_size);
 }
 
-void StartQuadrotor::obstacle_callback(const hdi_plan::obstacle_info::ConstPtr &msg) {
+void StartQuadrotor::path_spot_callback(const hdi_plan::obstacle_info::ConstPtr &msg) {
+    //std::cout << "path spot: " << msg->position.x << " " << msg->position.y << " " << msg->position.z << std::endl;
+	std::string obstacle_id = msg->name;
+    Obstacle_type obstacle_type = static_cast<Obstacle_type>(msg->type);
+	double obstacle_size = static_cast<double>(msg->size);
+    std::string prefab_id;
+
+	switch (obstacle_type) {
+		case Obstacle_type::cube: {
+			prefab_id = "test_cube";
+			break;
+		}
+		case Obstacle_type::spot: {
+			prefab_id = "spot";
+			break;
+		}
+		default: {
+			prefab_id = "test_cube";
+			break;
+		}
+    }
+
+    std::shared_ptr<StaticObject> obstacle = std::make_shared<StaticObject>(obstacle_id, prefab_id);
+	obstacle->setPosition(Eigen::Vector3f((Scalar)msg->position.x, (Scalar)msg->position.y, (Scalar)msg->position.z));
+	Vector<3> obstacle_size_local_scale(obstacle_size, obstacle_size, obstacle_size);
+	obstacle->setSize(obstacle_size_local_scale);
+
+    std::cout << "ob1 : " << msg->name << " " << " Prefab id is: " << prefab_id << " " << msg->position.x << " " << msg->position.y << " " << msg->position.z << std::endl;
+
+    this->unity_bridge_ptr_->addStaticObject(obstacle);
+
+    if (this->unity_render_ && this->unity_ready_) {
+        this->unity_bridge_ptr_->getRender(0);
+        this->unity_bridge_ptr_->handleOutput();
+    }
+}
+
+void StartQuadrotor::
+obstacle_callback(const hdi_plan::obstacle_info::ConstPtr &msg) {
     //std::cout << "Now render the obstacle." << std::endl;
 	std::string obstacle_id = msg->name;
     //std::cout << "obstacle_id is " << obstacle_id << std::endl;
@@ -81,6 +121,12 @@ void StartQuadrotor::obstacle_callback(const hdi_plan::obstacle_info::ConstPtr &
 			//std::cout << "human" << std::endl;
             obstacle_size = 3;
 			prefab_id = "Sphere";
+			break;
+		}
+        case Obstacle_type::spot: {
+			std::cout << "spot" << std::endl;
+            obstacle_size = 0.1;
+			prefab_id = "spot";
 			break;
 		}
 		default: {

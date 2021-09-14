@@ -5,10 +5,21 @@ namespace hdi_plan {
 PathVisualization::PathVisualization(const ros::NodeHandle &nh, const ros::NodeHandle &pnh)
 		: nh_(nh),
 		  pnh_(pnh) {
+
+	// load parameters
+	if (!this->load_params()) {
+		ROS_WARN("[%s] Could not load all parameters in motion planner.",
+				 this->pnh_.getNamespace().c_str());
+	} else {
+		ROS_INFO("[%s] Loaded all parameters in motion planner.", this->pnh_.getNamespace().c_str());
+	}
+
 	trajectory_vis_pub_ = nh_.advertise<visualization_msgs::Marker>(
 			"/visualization_marker", 1);
 	quadrotor_vis_pub_ = nh_.advertise<visualization_msgs::Marker>(
 			"/visualization_marker", 1);
+	path_spot_pub_ = nh_.advertise<hdi_plan::obstacle_info>("hdi_plan/path_spot_topic", 100);
+	//trajectory_sub_ = nh_.subscribe("hdi_plan/full_trajectory", 1, &PathVisualization::trajectory_callback, this);
 	trajectory_sub_ = nh_.subscribe("hdi_plan/full_trajectory", 1, &PathVisualization::trajectory_visualization_callback, this);
 	node_position_sub_ = nh_.subscribe("hdi_plan/node_position", 1, &PathVisualization::node_position_callback, this);
 	blocked_node_position_sub_ = nh_.subscribe("hdi_plan/blocked_node_position", 1, &PathVisualization::blocked_node_position_callback, this);
@@ -16,6 +27,65 @@ PathVisualization::PathVisualization(const ros::NodeHandle &nh, const ros::NodeH
 }
 
 PathVisualization::~PathVisualization() = default;
+
+bool PathVisualization::load_params() {
+	this->pnh_.getParam("goal_position", this->goal_position_param_);
+	return true;
+}
+
+void PathVisualization::trajectory_callback(const hdi_plan::point_array::ConstPtr &msg) {
+	int trajectory_size = msg->points.size();
+	int path_spot_list_size = this->path_spot_list_.size();
+	std::cout << "Size: " << trajectory_size << " spot: " << path_spot_list_size << std::endl;
+
+	int index = 0;
+	int stop_index = -1;
+	for (auto &obstacle_msg : this->path_spot_list_) {
+		if (index < trajectory_size) {
+			obstacle_msg.position.x = msg->points[index].x;
+			obstacle_msg.position.y = msg->points[index].y;
+			obstacle_msg.position.z = msg->points[index].z;
+			index += 1;
+			continue;
+		}
+
+		if (obstacle_msg.position.x == 100.0 && obstacle_msg.position.y == 100.0 && obstacle_msg.position.z == 100.0) {
+			stop_index = index;
+			break;
+		}
+
+		obstacle_msg.position.x = 100.0;
+		obstacle_msg.position.y = 100.0;
+		obstacle_msg.position.z = 100.0;
+		index += 1;
+	}
+
+	if (trajectory_size > path_spot_list_size) {
+		for (int i = path_spot_list_size; i < trajectory_size; i++) {
+			hdi_plan::obstacle_info obstacle_msg;
+			obstacle_msg.name = "spot_" + std::to_string(i);
+			obstacle_msg.type = hdi_plan::Obstacle_type::spot;
+			obstacle_msg.operation = true;
+			obstacle_msg.size = 0.1;
+			obstacle_msg.position.x = msg->points[i].x;
+			obstacle_msg.position.y = msg->points[i].y;
+			obstacle_msg.position.z = msg->points[i].z;
+			this->path_spot_list_.push_back(obstacle_msg);
+		}
+	}
+
+	this->publish_path_spot(stop_index);
+}
+
+void PathVisualization::publish_path_spot(int stop_index) {
+	int index = 0;
+	for (auto obstacle_msg : this->path_spot_list_) {
+		if (index == stop_index) break;
+		//std::cout << "spot pos: " << obstacle_msg.position.x << " " << obstacle_msg.position.y << " " << obstacle_msg.position.z << std::endl;
+		this->path_spot_pub_.publish(obstacle_msg);
+		index += 1;
+	}
+}
 
 visualization_msgs::MarkerArray PathVisualization::visualizationMarkers_to_msg(const VisualizationMarkers &markers) {
 	visualization_msgs::Marker marker_msg;
@@ -184,9 +254,9 @@ void PathVisualization::quadrotor_state_callback(const nav_msgs::Odometry::Const
 	marker.pose.orientation.y = 0.0;
 	marker.pose.orientation.z = 0.0;
 	marker.pose.orientation.w = 1.0;
-	marker.scale.x = 0.1;
-	marker.scale.y = 0.1;
-	marker.scale.z = 0.1;
+	marker.scale.x = 0.5;
+	marker.scale.y = 0.5;
+	marker.scale.z = 0.5;
 	marker.color.a = 0.4;
 	marker.color.r = 1.0f;
 	marker.color.g = 0.0f;

@@ -104,13 +104,13 @@ void PublishTrajectory::trajectory_callback(const hdi_plan::point_array::ConstPt
 			double distance = hdi_plan_utils::get_distance(traj_point, this->quadrotor_state_);
 			distance_list.push_back(distance);
 			if (distance < 0.3) {
-				ROS_INFO("distance smaller than 0.3");
+				//ROS_INFO("distance smaller than 0.3");
 				find_current_position = true;
 			} else {
-				ROS_INFO("larger than 0.3");
+				//ROS_INFO("larger than 0.3");
 			}
 			
-			std::cout << "traj point: " <<msg->points[i].x << " " << msg->points[i].y << " " << msg->points[i].z << " " << " quadrotor: " << this->quadrotor_state_.x() << " " << this->quadrotor_state_.y() << " " << this->quadrotor_state_.z() << " distance: " << distance << std::endl;
+			//std::cout << "traj point: " <<msg->points[i].x << " " << msg->points[i].y << " " << msg->points[i].z << " " << " quadrotor: " << this->quadrotor_state_.x() << " " << this->quadrotor_state_.y() << " " << this->quadrotor_state_.z() << " distance: " << distance << std::endl;
 			continue;
 		}
 
@@ -119,7 +119,7 @@ void PublishTrajectory::trajectory_callback(const hdi_plan::point_array::ConstPt
 		go_to_pose_msg.pose.position.z = msg->points[i].z;
 		//this->go_to_pose_pub_.publish(go_to_pose_msg);
 		this->pub_solution_path_.publish(go_to_pose_msg);
-		std::cout << "The executed position is: " << msg->points[i].x << " " << msg->points[i].y << " " << msg->points[i].z << std::endl;
+		//std::cout << "The executed position is: " << msg->points[i].x << " " << msg->points[i].y << " " << msg->points[i].z << std::endl;
 		this->executed_path_file << msg->points[i].x << " " << msg->points[i].y << " " << msg->points[i].z << "\n";
 		ros::Duration(1.0).sleep();
 	}

@@ -46,6 +46,7 @@ private:
     // subscriber
     ros::Subscriber quadrotor_state_sub_;
     ros::Subscriber obstacle_info_sub_;
+    ros::Subscriber path_spot_sub_;
 
     // publisher
     ros::Publisher arm_bridge_pub_;
@@ -76,7 +77,7 @@ private:
     void main_loop_callback(const ros::TimerEvent& event);
     void pose_callback(const nav_msgs::Odometry::ConstPtr& msg);
     void obstacle_callback(const hdi_plan::obstacle_info::ConstPtr &msg);
-
+    void path_spot_callback(const hdi_plan::obstacle_info::ConstPtr &msg);
     void set_unity();
     void connect_unity();
 };

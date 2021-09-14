@@ -68,22 +68,6 @@
         <node pkg="flightrender" type="RPG_Flightmare.x86_64" name="rpg_flightmare_render" unless="$(arg use_unity_editor)">
         </node>
 
-        <!-- Autopilot -->
-        <node pkg="autopilot" type="autopilot" name="autopilot" output="screen">
-            <rosparam file="$(find state_predictor)/parameters/hummingbird.yaml" />
-            <rosparam file="$(find rpg_rotors_interface)/parameters/position_controller.yaml" />
-            <rosparam file="$(find rpg_rotors_interface)/parameters/autopilot.yaml" />
-
-            <param name="position_controller/use_rate_mode" value="True" />
-
-            <param name="velocity_estimate_in_world_frame" value="false" />
-            <param name="state_estimate_timeout" value="0.1" />
-            <param name="control_command_delay" value="0.05" />
-            <param name="enable_command_feedthrough" value="$(arg enable_command_feedthrough)" />
-
-            <remap from="autopilot/state_estimate" to="ground_truth/odometry" />
-        </node>
-
         <node name="start_quadrotor_node" pkg="hdi_plan" type="start_quadrotor_node" output="screen">
             <rosparam file="$(find hdi_plan)/params/start_quadrotor.yaml" />
             <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
@@ -95,6 +79,11 @@
         </node>
 
         <node name="generate_dynamic_scene_node" pkg="hdi_plan" type="generate_dynamic_scene_node" output="screen" >
+        </node>
+
+        <node name="publish_trajectory_node" pkg="hdi_plan" type="publish_trajectory_node" output="screen">
+            <rosparam file="$(find hdi_plan)/params/motion_planner.yaml" />
+            <remap from="hdi_plan/quadrotor_state" to="ground_truth/odometry" />
         </node>
 
     </group>

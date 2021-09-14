@@ -5,19 +5,37 @@ namespace hdi_plan {
 GenerateObstacle::GenerateObstacle(const ros::NodeHandle &nh, const ros::NodeHandle &pnh)
 		: nh_(nh),
 		  pnh_(pnh) {
+
+	// load parameters
+	if (!this->load_params()) {
+		ROS_WARN("[%s] Could not load all parameters in motion planner.",
+				 this->pnh_.getNamespace().c_str());
+	} else {
+		ROS_INFO("[%s] Loaded all parameters in motion planner.", this->pnh_.getNamespace().c_str());
+	}
+
 	this->human_movement_pub_ = nh_.advertise<hdi_plan::obstacle_info>("hdi_plan/human_movement", 1);
 	this->update_human_obstacle_pub_ = nh_.advertise<hdi_plan::obstacle_info>("hdi_plan/obstacle_info_topic", 1);
+	this->path_spot_pub_ = nh_.advertise<hdi_plan::obstacle_info>("hdi_plan/path_spot_topic", 100);
 
+	//this->trajectory_sub_ = nh_.subscribe("hdi_plan/full_trajectory", 1, &GenerateObstacle::trajectory_callback, this);
+	ros::Duration(20.0).sleep();
+	this->publish_goal_position();
 	// wait until human movement start
-	//ros::Duration(24.0 + 40.0).sleep();
-	//this->publish_obstacle();
+	ros::Duration(24.0 + 20.0).sleep();
+	this->publish_obstacle();
 	//ros::Duration(5.0).sleep();
 	//this->remove_obstacle();
-	ros::Duration(24.0 + 40.0).sleep();
-	this->publish_human_movement_1();
+	//ros::Duration(24.0 + 20.0).sleep();
+	//this->publish_human_movement_1();
 }
 
 GenerateObstacle::~GenerateObstacle() = default;
+
+bool GenerateObstacle::load_params() {
+	this->pnh_.getParam("goal_position", this->goal_position_param_);
+	return true;
+}
 
 hdi_plan::obstacle_info GenerateObstacle::get_obstacle_message(bool operation, int human_id, double position_x, double position_y) {
 	hdi_plan::obstacle_info obstacle_msg;
@@ -30,6 +48,19 @@ hdi_plan::obstacle_info GenerateObstacle::get_obstacle_message(bool operation, i
 	obstacle_msg.position.z = 0;
 
 	return obstacle_msg;
+}
+
+void GenerateObstacle::publish_goal_position() {
+	ROS_INFO("Publish goal position");
+	hdi_plan::obstacle_info obstacle_msg;
+	obstacle_msg.name = "goal_position";
+	obstacle_msg.type = hdi_plan::Obstacle_type::cube;
+	obstacle_msg.operation = true;
+	obstacle_msg.size = 0.5;
+	obstacle_msg.position.x = this->goal_position_param_[0];
+	obstacle_msg.position.y = this->goal_position_param_[1];
+	obstacle_msg.position.z = this->goal_position_param_[2];
+	this->path_spot_pub_.publish(obstacle_msg);
 }
 
 void GenerateObstacle::publish_obstacle() {
@@ -118,6 +149,61 @@ void GenerateObstacle::publish_human_movement_2() {
 	}
 }
 
+/*
+void GenerateObstacle::trajectory_callback(const hdi_plan::point_array::ConstPtr &msg) {
+	int trajectory_size = msg->points.size();
+	int path_spot_list_size = this->path_spot_list_.size();
+	std::cout << "Size: " << trajectory_size << " spot: " << path_spot_list_size << std::endl;
+
+	int index = 0;
+	int stop_index = -1;
+	for (auto &obstacle_msg : this->path_spot_list_) {
+		if (index < trajectory_size) {
+			obstacle_msg.position.x = msg->points[index].x;
+			obstacle_msg.position.y = msg->points[index].y;
+			obstacle_msg.position.z = msg->points[index].z;
+			index += 1;
+			continue;
+		}
+
+		if (obstacle_msg.position.x == 100.0 && obstacle_msg.position.y == 100.0 && obstacle_msg.position.z == 100.0) {
+			stop_index = index;
+			break;
+		}
+
+		obstacle_msg.position.x = 100.0;
+		obstacle_msg.position.y = 100.0;
+		obstacle_msg.position.z = 100.0;
+		index += 1;
+	}
+
+	if (trajectory_size > path_spot_list_size) {
+		for (int i = path_spot_list_size; i < trajectory_size; i++) {
+			hdi_plan::obstacle_info obstacle_msg;
+			obstacle_msg.name = "spot_" + std::to_string(i);
+			obstacle_msg.type = hdi_plan::Obstacle_type::spot;
+			obstacle_msg.operation = true;
+			obstacle_msg.size = 0.1;
+			obstacle_msg.position.x = msg->points[i].x;
+			obstacle_msg.position.y = msg->points[i].y;
+			obstacle_msg.position.z = msg->points[i].z;
+			this->path_spot_list_.push_back(obstacle_msg);
+		}
+	}
+
+	this->publish_path_spot(stop_index);
+}
+
+void GenerateObstacle::publish_path_spot(int stop_index) {
+	int index = 0;
+	for (auto obstacle_msg : this->path_spot_list_) {
+		if (index == stop_index) break;
+		//std::cout << "spot pos: " << obstacle_msg.position.x << " " << obstacle_msg.position.y << " " << obstacle_msg.position.z << std::endl;
+		this->path_spot_pub_.publish(obstacle_msg);
+		index += 1;
+	}
+}
+*/
 }
 /*
 
