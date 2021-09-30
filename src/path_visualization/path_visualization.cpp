@@ -19,8 +19,8 @@ PathVisualization::PathVisualization(const ros::NodeHandle &nh, const ros::NodeH
 	quadrotor_vis_pub_ = nh_.advertise<visualization_msgs::Marker>(
 			"/visualization_marker", 1);
 	path_spot_pub_ = nh_.advertise<hdi_plan::obstacle_info>("hdi_plan/path_spot_topic", 100);
-	//trajectory_sub_ = nh_.subscribe("hdi_plan/full_trajectory", 1, &PathVisualization::trajectory_callback, this);
-	trajectory_sub_ = nh_.subscribe("hdi_plan/full_trajectory", 1, &PathVisualization::trajectory_visualization_callback, this);
+	trajectory_sub_ = nh_.subscribe("hdi_plan/full_trajectory", 1, &PathVisualization::trajectory_callback, this);
+	//trajectory_sub_ = nh_.subscribe("hdi_plan/full_trajectory", 1, &PathVisualization::trajectory_visualization_callback, this);
 	node_position_sub_ = nh_.subscribe("hdi_plan/node_position", 1, &PathVisualization::node_position_callback, this);
 	blocked_node_position_sub_ = nh_.subscribe("hdi_plan/blocked_node_position", 1, &PathVisualization::blocked_node_position_callback, this);
 	quadrotor_state_sub_ = nh_.subscribe("hdi_plan/quadrotor_state", 1, &PathVisualization::quadrotor_state_callback, this);

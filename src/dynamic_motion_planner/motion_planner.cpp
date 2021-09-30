@@ -486,7 +486,7 @@ bool MotionPlanner::check_if_node_inside_obstacle_for_adding_ob(const std::share
 	//std::cout << "The distance to obstacle is: " << distance << " . And the minus is: " << distance - this->quadrotor_radius_ - obstacle->get_size() << std::endl;
 	//std::cout << "obstacle size: " <<  obstacle->get_size() << std::endl;
 	if (distance - this->quadrotor_radius_ - this->min_clearence_ < obstacle->get_size()) {
-		Eigen::Vector3d node_state = node->get_state();
+		//Eigen::Vector3d node_state = node->get_state();
 		//std::cout << "remove node the node state is: " << node_state(0) << " " << node_state(1) << " " << node_state(2) << std::endl;
 		return true;
 	}

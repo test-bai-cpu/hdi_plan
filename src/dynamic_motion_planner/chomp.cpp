@@ -305,7 +305,7 @@ double Chomp::get_potential_for_gradient(double x, double y, double z) {
 	Eigen::Vector3d point(x,y,z);
 	for (auto obstacle : this->obstacle_map_) {
 		double distance = hdi_plan_utils::get_distance(point, obstacle.second->get_position()) -
-						  this->quadrotor_radius_ - (obstacle.second->get_size()/2.0);
+						  this->quadrotor_radius_ - obstacle.second->get_size();
 		if (distance < distance_to_nearest_obstacle) distance_to_nearest_obstacle = distance;
 	}
 
@@ -359,7 +359,7 @@ double Chomp::get_dynamic_potential_for_gradient(double x, double y, double z, i
 		Eigen::Vector2d predicted_position = human.second->predict_path(point_time);
 		Eigen::Vector2d point_position(x, y);
 		double distance = hdi_plan_utils::get_distance_2d(point_position, predicted_position) -
-						  this->quadrotor_radius_ - (human.second->get_human_block_distance()/2.0);
+						  this->quadrotor_radius_ - human.second->get_human_block_distance();
 		if (distance < distance_to_nearest_dynamic_obstacle) distance_to_nearest_dynamic_obstacle = distance;
 	}
 

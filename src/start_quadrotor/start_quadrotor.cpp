@@ -78,7 +78,7 @@ void StartQuadrotor::path_spot_callback(const hdi_plan::obstacle_info::ConstPtr 
 	Vector<3> obstacle_size_local_scale(obstacle_size, obstacle_size, obstacle_size);
 	obstacle->setSize(obstacle_size_local_scale);
 
-    std::cout << "ob1 : " << msg->name << " " << " Prefab id is: " << prefab_id << " " << msg->position.x << " " << msg->position.y << " " << msg->position.z << std::endl;
+    //std::cout << "ob1 : " << msg->name << " " << " Prefab id is: " << prefab_id << " " << msg->position.x << " " << msg->position.y << " " << msg->position.z << std::endl;
 
     this->unity_bridge_ptr_->addStaticObject(obstacle);
 
