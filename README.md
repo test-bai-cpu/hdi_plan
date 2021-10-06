@@ -1,5 +1,5 @@
 # hdi_plan
-An optimized motion planning framework that integrates optimized motion planner and UAV simulator.
+An optimized motion planning framework that integrates optimized motion planner and UAV simulator. The [stand-alone optimized motion planner part](https://github.com/test-bai-cpu/optimized_motion_planner) is also open-sourced at github.
 
 ## Prerequisites
 
